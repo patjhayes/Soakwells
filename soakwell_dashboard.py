@@ -1056,7 +1056,7 @@ def main():
         num_soakwells = st.number_input(
             "Number of Soakwells",
             min_value=1,
-            max_value=20,
+            max_value=30,
             value=1,
             step=1,
             help="Multiple smaller soakwells may be more effective than one large unit"
