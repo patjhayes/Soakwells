@@ -467,7 +467,7 @@ def scale_multiple_soakwell_results(single_result, num_soakwells, original_hydro
     
     return scaled_result
 
-def solve_for_minimum_soakwells(hydrograph_data_dict, ks=1e-5, Sr=1.0, max_soakwells=20):
+def solve_for_minimum_soakwells(hydrograph_data_dict, ks=1e-5, Sr=1.0, max_soakwells=30):
     """
     Comprehensive solve function: Find all viable soakwell configurations
     Tests all diameter/depth/quantity combinations against all storm scenarios
@@ -1124,7 +1124,7 @@ def main():
         st.subheader("🔧 Comprehensive Design Solver")
         st.markdown("Test **all possible configurations** against **all storm scenarios**:")
         st.markdown("- All standard diameter/depth combinations")
-        st.markdown("- 1-20 soakwells per configuration") 
+        st.markdown("- 1-30 soakwells per configuration") 
         st.markdown("- Fixed soil conditions (set above)")
         
         solve_button = st.button(
@@ -1451,7 +1451,7 @@ def main():
                         hydrograph_data_dict,
                         ks=ks,
                         Sr=Sr,
-                        max_soakwells=20
+                        max_soakwells=30
                     )
                     
                     # Store results in session state

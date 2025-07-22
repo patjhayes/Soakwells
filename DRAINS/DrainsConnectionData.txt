@@ -1,0 +1,70 @@
+CHANNEL DATA
+TRENCH DRAINAGE
+7.5 m roadway with 3% crossfall and roll top kerb
+10 m roadway with 3% crossfall and barrier kerb
+10 m roadway with 3% crossfall and roll top kerb
+Channel section 600 mm wide
+Channel section 900 mm wide
+4 m wide pathway
+Swale with 1:4 sideslopes
+Swale with 1:6 sideslopes
+Overflow across road low point - parabola x = 15, y = 0.3
+V CHNL
+overland channel
+Spoon Drain
+3m trapz
+diversion drain
+PIT DATA
+MR Side Entry Gully TEN to DEN, 3% crossfall, 0.5% grade	WA Main Roads Side Entry Gully 880 mm long	WA Main Roads Double Side Entry Gullies
+MR Side Entry Gully TEN to DEN, 3% crossfall, 1% grade	WA Main Roads Side Entry Gully 880 mm long	WA Main Roads Double Side Entry Gullies
+MR Side Entry Gully TEN to DEN, 3% crossfall, 2% grade	WA Main Roads Side Entry Gully 880 mm long	WA Main Roads Double Side Entry Gullies
+MR Side Entry Gully TEN to DEN, 3% crossfall, 4% grade	WA Main Roads Side Entry Gully 880 mm long	WA Main Roads Double Side Entry Gullies
+MR Side Entry Gully TEN to DEN, 3% crossfall, 8% grade	WA Main Roads Side Entry Gully 880 mm long	WA Main Roads Double Side Entry Gullies
+MR Side Entry Gully TEN to DEN, 3% crossfall, 12% grade	WA Main Roads Side Entry Gully 880 mm long	WA Main Roads Double Side Entry Gullies
+MR Side Entry Gully TEN to DEN, 3% crossfall, 16% grade	WA Main Roads Side Entry Gully 880 mm long	WA Main Roads Double Side Entry Gullies
+MR Street Gully TGT to DGT, 3% crossfall, 0.5% grade	WA Main Roads Street Gully with Single Grate	WA Main Roads Street Gully with Double Grate
+MR Street Gully TGT to DGT, 3% crossfall, 1% grade	WA Main Roads Street Gully with Single Grate
+MR Street Gully TGT to DGT, 3% crossfall, 2% grade	WA Main Roads Street Gully with Single Grate
+MR Street Gully TGT to DGT, 3% crossfall, 4% grade	WA Main Roads Street Gully with Single Grate
+MR Street Gully TGT to DGT, 3% crossfall, 8% grade	WA Main Roads Street Gully with Single Grate
+MR Street Gully TGT to DGT, 3% crossfall, 12% grade	WA Main Roads Street Gully with Single Grate
+MR Street Gully TGT to DGT, 3% crossfall, 16% grade	WA Main Roads Street Gully with Single Grate
+MR Normal Catchpit, 3% sideslope, 0.5% grade	WA Main Roads Normal Catchpit with Single Grate
+MR Normal Catchpit, 3% sideslope, 1% grade	WA Main Roads Normal Catchpit with Single Grate
+MR Normal Catchpit, 3% sideslope, 2% grade	WA Main Roads Normal Catchpit with Single Grate
+MR Normal Catchpit, 3% sideslope, 3% grade	WA Main Roads Normal Catchpit with Single Grate
+MR Normal Catchpit, 3% sideslope, 4% grade	WA Main Roads Normal Catchpit with Single Grate
+MR Normal Catchpit, 3% sideslope, 6% grade	WA Main Roads Normal Catchpit with Single Grate
+MR Normal Catchpit, 3% sideslope, 8% grade	WA Main Roads Normal Catchpit with Single Grate
+MR High Flow Catchpit, 3% sideslope, 0.5% grade	WA Main Roads High Flow Catchpit with Single Grate
+MR High Flow Catchpit, 3% sideslope, 1% grade	WA Main Roads High Flow Catchpit with Single Grate
+MR High Flow Catchpit, 3% sideslope, 2% grade	WA Main Roads High Flow Catchpit with Single Grate
+MR High Flow Catchpit, 3% sideslope, 3% grade	WA Main Roads High Flow Catchpit with Single Grate
+MR High Flow Catchpit, 3% sideslope, 4% grade	WA Main Roads High Flow Catchpit with Single Grate
+MR High Flow Catchpit, 3% sideslope, 6% grade	WA Main Roads High Flow Catchpit with Single Grate
+MR High Flow Catchpit, 3% sideslope, 8% grade	WA Main Roads High Flow Catchpit with Single Grate
+Junction Pit or Manhole (sealed)	Junction Pit or Manhole
+Downpipe	Downpipe
+Grated Strip Drain	ACO MONOBLOCK RD200-20 
+100% Capture	100% Capture Pit
+PIPE DATA
+Concrete, 0.2% Minimum slope	100	150	225	300	375	450	525	600	675	750	825	900	1050	1200	1350	1500	1650	1800	1950	2100	2250	2400	2550	2700
+Existing	100	150	225	300	375	450	525	600	675	750	825	900	1050	1200	1350	1500	1650	1800	1950	2100	2250	2400	2550	2700
+Concrete, under roads, 0.5% minimum slope	100	150	225	300	375	450	525	600	675	750	825	900	1050	1200	1350	1500	1650	1950	2100	2250	2400	2550	2700
+Concrete, not under roads, 0.5% minimum slope	100	150	225	300	375	450	525	600	675	750	825	900	1050	1200	1350	1500	1650	1800	1950	2100	2250	2400	2550	2700
+Concrete, under roads, QUDM minimum slope	100	150	225	300	375	450	525	600	675	750	825	900	1050	1200	1350	1500	1650	1950	2100	2250	2400	2700
+Concrete, not under roads, QUDM minimum slope	100	150	225	300	375	450	525	600	675	750	825	900	1050	1200	1350	1500	1650	1800	1950	2100	2250	2400	2550	2700
+uPVC, under roads, 1% minimum slope	90	100	150	225	300	375
+uPVC, not under roads, 1% minimum slope	90	100	150	225	300	375
+uPVC, under roads, AS/NZS 3500.3 minimum slope	90	100	150	225	300	375
+uPVC, not under roads, AS/NZS 3500.3 minimum slope	90	100	150	225	300	375
+FRC Class 1	225	300	375	450	525	600	675	750
+FRC Class 2	100	150	225	300	375	450	525	600	675	750
+FRC Class 3	100	150	225	300	375	450	525	600	675	750
+FRC Class 4	100	150	225	300	375	450	525	600	675	750
+Polyethylene (black) pipe	90	110	125	140	160	180	200	225	250	280	315	355	400	450	500	560	630	710	800	900	1000
+Polypropylene ribbed pipes under roads	150	225	300	375	450	525	600	750	900
+Polypropylene ribbed pipes not under roads	150	225	300	375	450	525	600	750	900
+Box culverts (samples)								
+Concrete Class 6, 0.2% Minimum Slope	375	525
+900 x 300	10
