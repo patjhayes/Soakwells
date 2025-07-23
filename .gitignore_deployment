@@ -1,0 +1,29 @@
+# Streamlit app files only
+streamlit_app.py
+requirements.txt
+.streamlit/
+
+# Documentation
+*.md
+
+# Ignore everything else for now
+*.py
+!streamlit_app.py
+
+# Ignore data files
+*.ts1
+*.dwg
+*.dwl*
+*.bak
+*.sv$
+*.pdf
+*.txt
+!requirements.txt
+
+# Ignore directories that might have problematic imports
+__pycache__/
+.venv/
+DRAINS/
+EXCEL/
+GIS/
+soakwell_analysis_plots/
