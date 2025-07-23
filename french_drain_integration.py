@@ -17,10 +17,10 @@ try:
     FRENCH_DRAIN_MODEL_AVAILABLE = True
 except ImportError as e:
     FRENCH_DRAIN_MODEL_AVAILABLE = False
-    st.error(f"French drain model import error: {str(e)}")
+    # Don't show error at import time - will handle gracefully in UI
 except Exception as e:
     FRENCH_DRAIN_MODEL_AVAILABLE = False
-    st.error(f"French drain model error: {str(e)}")
+    # Don't show error at import time - will handle gracefully in UI
 
 def add_french_drain_sidebar():
     """Add French drain parameters to sidebar"""
