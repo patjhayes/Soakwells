@@ -15,9 +15,15 @@ Date: July 2025
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 import math
+
+# Optional matplotlib import
+try:
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
 
 class FrenchDrainModel:
     """
@@ -360,7 +366,10 @@ class FrenchDrainModel:
         results: Results dictionary from simulate_french_drain_response
         save_path: Optional path to save plots
         """
-        
+        if not MATPLOTLIB_AVAILABLE:
+            print("Matplotlib not available - cannot generate plots")
+            return None
+            
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
         fig.suptitle('French Drain System Performance Analysis', fontsize=16, fontweight='bold')
         

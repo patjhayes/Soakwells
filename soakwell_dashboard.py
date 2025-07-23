@@ -17,13 +17,17 @@ import tempfile
 import os
 import datetime
 
-# French drain integration
+# French drain integration (with robust error handling)
+FRENCH_DRAIN_AVAILABLE = False
 try:
     from french_drain_integration import integrate_french_drain_analysis
     FRENCH_DRAIN_AVAILABLE = True
-except ImportError:
-    FRENCH_DRAIN_AVAILABLE = False
-    st.sidebar.warning("⚠️ French drain analysis not available. Check french_drain_integration.py")
+except ImportError as e:
+    # Don't show warning in sidebar yet - wait until sidebar is created
+    pass
+except Exception as e:
+    # Handle any other import errors
+    pass
 
 # Set page config
 st.set_page_config(

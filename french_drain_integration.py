@@ -10,10 +10,24 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import math
-from french_drain_model import FrenchDrainModel
+
+# Import French drain model with error handling
+try:
+    from french_drain_model import FrenchDrainModel
+    FRENCH_DRAIN_MODEL_AVAILABLE = True
+except ImportError as e:
+    FRENCH_DRAIN_MODEL_AVAILABLE = False
+    st.error(f"French drain model import error: {str(e)}")
+except Exception as e:
+    FRENCH_DRAIN_MODEL_AVAILABLE = False
+    st.error(f"French drain model error: {str(e)}")
 
 def add_french_drain_sidebar():
     """Add French drain parameters to sidebar"""
+    
+    # Check if French drain model is available
+    if not FRENCH_DRAIN_MODEL_AVAILABLE:
+        return {'enabled': False, 'error': 'French drain model not available'}
     
     st.sidebar.markdown("---")
     st.sidebar.header("🚰 French Drain Analysis")
