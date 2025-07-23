@@ -1133,9 +1133,9 @@ def main():
         show_comparison = st.checkbox("Show comparison chart", True)
         
         # French drain analysis toggle
-        french_drain_enabled = False
+        french_drain_params = {'enabled': False}
         if FRENCH_DRAIN_AVAILABLE:
-            french_drain_enabled = add_french_drain_sidebar()
+            french_drain_params = add_french_drain_sidebar()
         elif uploaded_files:  # Only show warning if files are uploaded
             st.warning("⚠️ French drain analysis not available - module not found")
         
@@ -1723,7 +1723,7 @@ def main():
                 """)
             
             # French Drain Integration
-            if FRENCH_DRAIN_AVAILABLE and french_drain_enabled:
+            if FRENCH_DRAIN_AVAILABLE and french_drain_params['enabled']:
                 st.markdown("---")
                 
                 # Prepare soil parameters for French drain analysis
@@ -1734,7 +1734,7 @@ def main():
                 }
                 
                 # Run French drain analysis
-                french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params)
+                french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params)
                 
                 # If French drain analysis was run, offer comparison
                 if french_drain_results:

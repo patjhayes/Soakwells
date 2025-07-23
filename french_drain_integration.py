@@ -525,13 +525,15 @@ def generate_comparison_report(soakwell_results, french_drain_results, soil_para
         st.warning("Unable to generate comparison - insufficient data from both systems")
 
 # Function to be called from main dashboard
-def integrate_french_drain_analysis(hydrograph_data_dict, soil_params):
+def integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params):
     """
     Main integration function to be called from the soakwell dashboard
-    """
     
-    # Add French drain sidebar controls
-    french_drain_params = add_french_drain_sidebar()
+    Parameters:
+    hydrograph_data_dict: Dictionary of storm scenarios
+    soil_params: Soil parameters dictionary
+    french_drain_params: French drain parameters from sidebar (includes 'enabled' flag)
+    """
     
     if french_drain_params['enabled']:
         
