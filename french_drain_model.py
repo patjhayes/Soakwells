@@ -199,12 +199,24 @@ class FrenchDrainModel:
             # Current inflow to system
             current_inflow = inflow[i]  # m³/s total inflow
             
-            # French drain inflow strategy:
-            # 1. Inflow enters trench directly (not pipe)
-            # 2. Pipe serves as overflow/conveyance when trench is full
-            # 3. Perforation flow is from trench to pipe (not pipe to trench)
+            # Pipe flow calculation
+            if current_inflow <= max_pipe_flow:
+                pipe_flow[i] = current_inflow
+                pipe_overflow[i] = 0.0
+            else:
+                pipe_flow[i] = max_pipe_flow
+                pipe_overflow[i] = current_inflow - max_pipe_flow
             
-            # Calculate current trench water level from previous timestep
+            # Estimate pipe water level (simplified)
+            # Assume pipe flows part-full with level proportional to flow rate
+            if pipe_flow[i] > 0:
+                flow_ratio = pipe_flow[i] / max_pipe_flow
+                # Simplified relationship: water level as fraction of pipe diameter
+                pipe_water_level = min(flow_ratio * self.pipe_diameter, self.pipe_diameter)
+            else:
+                pipe_water_level = 0.0
+            
+            # Calculate current trench water level
             if trench_volume[i-1] > 0:
                 trench_water_level[i-1] = min(
                     trench_volume[i-1] / (self.trench_width * length * self.aggregate_porosity),
@@ -213,47 +225,30 @@ class FrenchDrainModel:
             else:
                 trench_water_level[i-1] = 0.0
             
-            # Infiltration from trench to native soil (always occurring if water present)
+            # Flow from pipe to trench through perforations
+            perforation_outflow[i] = self.calculate_perforation_inflow(
+                pipe_flow[i], 
+                pipe_water_level, 
+                trench_water_level[i-1]
+            ) * length  # Scale by length
+            
+            # Infiltration from trench to native soil
             infiltration_outflow[i] = self.calculate_infiltration_rate(
                 trench_water_level[i-1]
             ) * length  # Scale by length
             
-            # Direct inflow to trench (main French drain mechanism)
-            direct_trench_inflow = current_inflow  # All inflow goes to trench initially
+            # Water balance for trench storage
+            volume_change = (perforation_outflow[i] - infiltration_outflow[i]) * dt_actual
+            trench_volume[i] = max(0.0, trench_volume[i-1] + volume_change)
             
-            # Check if trench has capacity for direct inflow
+            # Check for trench overflow
             max_trench_volume = self.trench_width * length * self.trench_depth * self.aggregate_porosity
-            
-            # Try to accommodate inflow in trench
-            potential_volume = trench_volume[i-1] + (direct_trench_inflow - infiltration_outflow[i]) * dt_actual
-            
-            if potential_volume <= max_trench_volume:
-                # Trench can handle all inflow
-                trench_volume[i] = max(0.0, potential_volume)
-                pipe_flow[i] = 0.0  # No pipe flow needed
-                pipe_overflow[i] = 0.0
-                perforation_outflow[i] = 0.0
-                
-            else:
-                # Trench is full/overflowing - excess goes to pipe
+            if trench_volume[i] > max_trench_volume:
+                trench_overflow = trench_volume[i] - max_trench_volume
                 trench_volume[i] = max_trench_volume
-                excess_flow = (potential_volume - max_trench_volume) / dt_actual
-                
-                # Pipe handles excess flow
-                pipe_props = self.calculate_pipe_capacity(pipe_slope)
-                max_pipe_flow = pipe_props['flow_capacity_full']
-                
-                if excess_flow <= max_pipe_flow:
-                    pipe_flow[i] = excess_flow
-                    pipe_overflow[i] = 0.0
-                else:
-                    pipe_flow[i] = max_pipe_flow
-                    pipe_overflow[i] = excess_flow - max_pipe_flow
-                
-                # When pipe is active, some flow may be from trench to pipe
-                perforation_outflow[i] = min(excess_flow, max_pipe_flow)
+                pipe_overflow[i] += trench_overflow / dt_actual
             
-            # Update trench water level for this timestep
+            # Update trench water level
             trench_water_level[i] = min(
                 trench_volume[i] / (self.trench_width * length * self.aggregate_porosity),
                 self.trench_depth
@@ -296,114 +291,48 @@ class FrenchDrainModel:
             }
         }
     
-    def create_design_storm(self, intensity_mm_hr=20, duration_hours=2, shape='triangular'):
+    def analyze_ts1_hydrograph(self, hydrograph_data, pipe_slope=0.005, length=100.0):
         """
-        Create a design storm hydrograph for testing
+        Analyze French drain performance using external hydrograph data
         
         Parameters:
-        intensity_mm_hr: Peak rainfall intensity (mm/hr)
-        duration_hours: Storm duration (hours)
-        shape: Storm shape ('triangular', 'uniform', 'chicago')
+        hydrograph_data: Dict with 'time' (seconds) and 'flow' (m³/s) arrays from .ts1 file
+        pipe_slope: Longitudinal slope of pipe (m/m)
+        length: Length of French drain (m)
         
         Returns:
-        dict: Storm hydrograph
+        dict: Analysis results
         """
         
-        # More realistic catchment area per unit length of drain
-        # For a French drain, assume contributing width of about 10-20m
-        contributing_width_m = 15  # meters on each side of drain
-        catchment_area_per_m = contributing_width_m * 1.0  # m² per meter of drain
-        drain_length = 100  # Default length for calculations
-        total_catchment_area_m2 = catchment_area_per_m * drain_length
+        # Validate input data format
+        if not isinstance(hydrograph_data, dict):
+            raise ValueError("Hydrograph data must be a dictionary")
         
-        runoff_coefficient = 0.7  # More conservative for mixed surfaces
+        if 'time' not in hydrograph_data or 'flow' not in hydrograph_data:
+            raise ValueError("Hydrograph data must contain 'time' and 'flow' keys")
         
-        # Time array (30-second intervals for better resolution)
-        dt = 30  # seconds
-        time = np.arange(0, duration_hours * 3600 + dt, dt)
-        n_steps = len(time)
+        # Run simulation with your data
+        results = self.simulate_french_drain_response(
+            hydrograph_data, 
+            pipe_slope=pipe_slope, 
+            length=length
+        )
         
-        # Convert intensity to flow rate
-        peak_intensity_ms = intensity_mm_hr / (1000 * 3600)  # mm/hr to m/s
-        peak_flow = peak_intensity_ms * total_catchment_area_m2 * runoff_coefficient  # m³/s
-        
-        # Create hydrograph shape
-        if shape == 'triangular':
-            # Triangular storm with peak at 40% of duration (more realistic)
-            peak_time = duration_hours * 0.4 * 3600  # seconds
-            flow = np.zeros(n_steps)
-            
-            for i, t in enumerate(time):
-                if t <= peak_time:
-                    # Rising limb
-                    flow[i] = peak_flow * (t / peak_time)
-                else:
-                    # Falling limb (longer recession)
-                    remaining_time = duration_hours * 3600 - peak_time
-                    flow[i] = peak_flow * (1 - (t - peak_time) / remaining_time)
-                flow[i] = max(0, flow[i])
-                
-        elif shape == 'uniform':
-            # Uniform storm at 60% of peak (more realistic than 50%)
-            flow = np.full(n_steps, peak_flow * 0.6)
-            
-        elif shape == 'chicago':
-            # Improved Chicago storm distribution
-            a = intensity_mm_hr  # mm/hr
-            b = 15  # Storm parameter (minutes)
-            r = 0.7  # Rainfall distribution parameter
-            
-            flow = np.zeros(n_steps)
-            total_duration_min = duration_hours * 60
-            
-            for i, t in enumerate(time):
-                t_min = t / 60  # Convert to minutes
-                if t_min <= total_duration_min and t_min > 0:
-                    # Chicago storm equation
-                    intensity_mmhr = a * ((t_min + b) / (t_min + b))**(-r)
-                    intensity_ms = intensity_mmhr / (1000 * 3600)
-                    flow[i] = intensity_ms * total_catchment_area_m2 * runoff_coefficient
-                else:
-                    flow[i] = 0
-        
-        return {
-            'time': time,
-            'flow': flow,
-            'peak_intensity_mm_hr': intensity_mm_hr,
-            'duration_hours': duration_hours,
-            'catchment_area_m2': total_catchment_area_m2,
-            'runoff_coefficient': runoff_coefficient,
-            'peak_flow_m3s': peak_flow,
-            'contributing_width_m': contributing_width_m
+        # Add analysis metadata
+        results['analysis_info'] = {
+            'data_source': 'External .ts1 file',
+            'total_duration_hours': (max(hydrograph_data['time']) - min(hydrograph_data['time'])) / 3600,
+            'peak_inflow_m3s': max(hydrograph_data['flow']),
+            'system_configuration': {
+                'pipe_diameter_mm': self.pipe_diameter * 1000,
+                'trench_dimensions': f"{self.trench_width*1000:.0f}mm × {self.trench_depth*1000:.0f}mm",
+                'soil_permeability_ms': self.soil_k,
+                'system_length_m': length,
+                'pipe_slope_percent': pipe_slope * 100
+            }
         }
-            'peak_flow_m3s': peak_flow,
-            'contributing_width_m': contributing_width_m
-        }
-            
-        elif shape == 'chicago':
-            # Chicago storm distribution
-            a = peak_intensity_ms * 60  # Convert to mm/min
-            b = 10  # Storm parameter
-            r = 0.67  # Rainfall distribution parameter
-            
-            flow = np.zeros(n_steps)
-            total_duration_min = duration_hours * 60
-            
-            for i, t in enumerate(time):
-                t_min = t / 60  # Convert to minutes
-                if t_min <= total_duration_min:
-                    # Chicago storm equation
-                    intensity = a * ((t_min + b) ** (r - 1)) / (t_min + b) ** r
-                    flow[i] = intensity / 1000 / 60 * catchment_area_m2 * runoff_coefficient  # Convert mm/min to m³/s
         
-        return {
-            'time': time,
-            'flow': flow,
-            'peak_intensity_mm_hr': intensity_mm_hr,
-            'duration_hours': duration_hours,
-            'catchment_area_m2': catchment_area_m2,
-            'runoff_coefficient': runoff_coefficient
-        }
+        return results
     
     def plot_results(self, results, save_path=None):
         """
@@ -504,50 +433,34 @@ class FrenchDrainModel:
 
 def main():
     """
-    Demonstration of French drain modeling
+    Demonstration of French drain modeling capabilities
+    Note: This model is designed to work with external hydrograph data (.ts1 files)
     """
     
     print("French Drain Infiltration Model")
     print("="*50)
+    print("This model processes hydrograph data from your hydrological software (.ts1 files)")
+    print("Use the Streamlit dashboard to upload and analyze your data.")
+    print("="*50)
     
-    # Initialize model
+    # Initialize model to show system configuration
     drain = FrenchDrainModel()
     
     # Display system properties
-    print("\nSystem Configuration:")
+    print("\nDefault System Configuration:")
     print(f"- Pipe: {drain.pipe_diameter*1000:.0f}mm diameter concrete")
     print(f"- Trench: {drain.trench_width*1000:.0f}mm wide × {drain.trench_depth*1000:.0f}mm deep")
     print(f"- Aggregate: 40mm single sized (porosity = {drain.aggregate_porosity:.2f})")
-    print(f"- Soil permeability: {drain.soil_k:.2e} m/s")
+    print(f"- Soil permeability: {drain.soil_k:.2e} m/s (configurable)")
     print(f"- Effective storage: {drain.effective_storage_volume:.3f} m³/m length")
+    print("\nTo analyze your data:")
+    print("1. Run the Streamlit dashboard")
+    print("2. Upload your .ts1 hydrograph files") 
+    print("3. Configure soil parameters")
+    print("4. Enable French drain analysis in the sidebar")
+    print("5. Compare with soakwell performance")
     
-    # Create design storm
-    print(f"\nGenerating design storm...")
-    storm = drain.create_design_storm(
-        intensity_mm_hr=25,  # 25mm/hr peak intensity
-        duration_hours=2,    # 2-hour duration
-        shape='triangular'   # Triangular distribution
-    )
-    
-    print(f"Storm characteristics:")
-    print(f"- Peak intensity: {storm['peak_intensity_mm_hr']} mm/hr")
-    print(f"- Duration: {storm['duration_hours']} hours")
-    print(f"- Catchment area: {storm['catchment_area_m2']} m²")
-    print(f"- Runoff coefficient: {storm['runoff_coefficient']}")
-    print(f"- Peak flow: {max(storm['flow']):.4f} m³/s")
-    
-    # Run simulation
-    print(f"\nRunning French drain simulation...")
-    results = drain.simulate_french_drain_response(
-        storm, 
-        pipe_slope=0.005,  # 0.5% gradient
-        length=100.0       # 100m length
-    )
-    
-    # Display results
-    drain.plot_results(results)
-    
-    return drain, results
+    return drain
 
 if __name__ == "__main__":
-    drain_model, simulation_results = main()
+    drain_model = main()
