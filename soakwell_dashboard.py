@@ -1733,8 +1733,21 @@ def main():
                     'soil_type': soil_type
                 }
                 
-                # Run French drain analysis
-                french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params)
+                # Run French drain analysis with error handling for version compatibility
+                try:
+                    # Try new 3-argument version first
+                    french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params)
+                except TypeError as e:
+                    # Fall back to 2-argument version for backward compatibility
+                    if "takes 2 positional arguments" in str(e):
+                        st.warning("Using backward compatibility mode for French drain analysis...")
+                        french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params)
+                    else:
+                        st.error(f"Error in French drain analysis: {str(e)}")
+                        french_drain_results = None
+                except Exception as e:
+                    st.error(f"Unexpected error in French drain analysis: {str(e)}")
+                    french_drain_results = None
                 
                 # If French drain analysis was run, offer comparison
                 if french_drain_results:

@@ -34,6 +34,7 @@ def add_french_drain_sidebar():
     
     enable_french_drain = st.sidebar.checkbox(
         "Enable French Drain Analysis",
+        key="enable_french_drain_analysis",
         help="Compare with French drain infiltration system"
     )
     
@@ -525,7 +526,7 @@ def generate_comparison_report(soakwell_results, french_drain_results, soil_para
         st.warning("Unable to generate comparison - insufficient data from both systems")
 
 # Function to be called from main dashboard
-def integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params):
+def integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params=None):
     """
     Main integration function to be called from the soakwell dashboard
     
@@ -533,9 +534,18 @@ def integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_dr
     hydrograph_data_dict: Dictionary of storm scenarios
     soil_params: Soil parameters dictionary
     french_drain_params: French drain parameters from sidebar (includes 'enabled' flag)
+                         If None, will call add_french_drain_sidebar() internally (backward compatibility)
     """
     
-    if french_drain_params['enabled']:
+    # Handle backward compatibility - if french_drain_params not provided, get it from sidebar
+    if french_drain_params is None:
+        try:
+            french_drain_params = add_french_drain_sidebar()
+        except Exception as e:
+            st.error(f"Error getting French drain parameters: {str(e)}")
+            return None
+    
+    if french_drain_params.get('enabled', False):
         
         # Run French drain analysis
         st.info("🔄 Running French drain analysis...")
