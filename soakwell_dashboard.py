@@ -20,7 +20,7 @@ import datetime
 # French drain integration (with robust error handling)
 FRENCH_DRAIN_AVAILABLE = False
 try:
-    from french_drain_integration import integrate_french_drain_analysis
+    from french_drain_integration import integrate_french_drain_analysis, add_french_drain_sidebar
     FRENCH_DRAIN_AVAILABLE = True
 except ImportError as e:
     # Don't show warning in sidebar yet - wait until sidebar is created
@@ -1132,6 +1132,13 @@ def main():
         show_individual = st.checkbox("Show individual scenario plots", True)
         show_comparison = st.checkbox("Show comparison chart", True)
         
+        # French drain analysis toggle
+        french_drain_enabled = False
+        if FRENCH_DRAIN_AVAILABLE:
+            french_drain_enabled = add_french_drain_sidebar()
+        elif uploaded_files:  # Only show warning if files are uploaded
+            st.warning("⚠️ French drain analysis not available - module not found")
+        
         # Solve functionality
         st.subheader("🔧 Comprehensive Design Solver")
         st.markdown("Test **all possible configurations** against **all storm scenarios**:")
@@ -1716,7 +1723,7 @@ def main():
                 """)
             
             # French Drain Integration
-            if FRENCH_DRAIN_AVAILABLE:
+            if FRENCH_DRAIN_AVAILABLE and french_drain_enabled:
                 st.markdown("---")
                 
                 # Prepare soil parameters for French drain analysis
