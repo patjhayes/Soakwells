@@ -17,6 +17,14 @@ import tempfile
 import os
 import datetime
 
+# French drain integration
+try:
+    from french_drain_integration import integrate_french_drain_analysis
+    FRENCH_DRAIN_AVAILABLE = True
+except ImportError:
+    FRENCH_DRAIN_AVAILABLE = False
+    st.sidebar.warning("⚠️ French drain analysis not available. Check french_drain_integration.py")
+
 # Set page config
 st.set_page_config(
     page_title="Soakwell Design Dashboard",
@@ -1702,6 +1710,70 @@ def main():
                 
                 **Manufacturer Data:** Prices and specifications from www.soakwells.com (Perth Soakwells)
                 """)
+            
+            # French Drain Integration
+            if FRENCH_DRAIN_AVAILABLE:
+                st.markdown("---")
+                
+                # Prepare soil parameters for French drain analysis
+                soil_params = {
+                    'ks': ks,
+                    'Sr': Sr,
+                    'soil_type': soil_type
+                }
+                
+                # Run French drain analysis
+                french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params)
+                
+                # If French drain analysis was run, offer comparison
+                if french_drain_results:
+                    st.subheader("⚖️ Soakwell vs French Drain Comparison")
+                    
+                    # Create comparison summary
+                    comparison_data = []
+                    for filename in hydrograph_data_dict.keys():
+                        if filename in all_results and filename in french_drain_results:
+                            
+                            # Soakwell performance
+                            sw_result = None
+                            for name, result in all_results.items():
+                                if filename in name:
+                                    sw_result = result
+                                    break
+                            
+                            if sw_result and french_drain_results[filename]:
+                                sw_efficiency = sw_result['performance']['storage_efficiency'] * 100
+                                fd_efficiency = french_drain_results[filename]['performance']['infiltration_efficiency_percent']
+                                
+                                sw_overflow = "Yes" if sw_result['performance']['peak_overflow_rate'] > 0 else "No"
+                                fd_overflow = "Yes" if french_drain_results[filename]['performance']['total_overflow_m3'] > 0 else "No"
+                                
+                                comparison_data.append({
+                                    'Storm Scenario': filename,
+                                    'Soakwell Efficiency (%)': f"{sw_efficiency:.1f}",
+                                    'French Drain Efficiency (%)': f"{fd_efficiency:.1f}",
+                                    'Soakwell Overflow': sw_overflow,
+                                    'French Drain Overflow': fd_overflow,
+                                    'Better System': 'French Drain' if fd_efficiency > sw_efficiency else 'Soakwell' if sw_efficiency > fd_efficiency else 'Similar'
+                                })
+                    
+                    if comparison_data:
+                        comparison_df = pd.DataFrame(comparison_data)
+                        st.dataframe(comparison_df, use_container_width=True)
+                        
+                        # Overall recommendation
+                        fd_wins = sum(1 for row in comparison_data if row['Better System'] == 'French Drain')
+                        sw_wins = sum(1 for row in comparison_data if row['Better System'] == 'Soakwell')
+                        
+                        if fd_wins > sw_wins:
+                            st.success("🏆 **Overall Recommendation: French Drain System**")
+                            st.markdown("French drain shows better performance across most storm scenarios.")
+                        elif sw_wins > fd_wins:
+                            st.success("🏆 **Overall Recommendation: Soakwell System**")
+                            st.markdown("Soakwell system shows better performance across most storm scenarios.")
+                        else:
+                            st.info("⚖️ **Both systems show similar performance**")
+                            st.markdown("Consider other factors like cost, installation complexity, and site constraints.")
             
             # Processing log (collapsed by default)
             if 'log_messages' in locals() and log_messages:
