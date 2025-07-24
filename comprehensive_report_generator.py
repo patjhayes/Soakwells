@@ -642,7 +642,13 @@ def add_comprehensive_report_to_sidebar():
     st.sidebar.markdown("---")
     st.sidebar.subheader("📋 Engineering Documentation")
     
+    # Use session state to track comprehensive report generation
     if st.sidebar.button("📄 Generate Complete Report", key="comprehensive_report_btn"):
-        return True
-    else:
-        return False
+        st.session_state.generate_comprehensive_report = True
+        
+    # Clear button if report has been generated
+    if st.session_state.get('generate_comprehensive_report', False):
+        if st.sidebar.button("🗑️ Clear Report", key="clear_comprehensive_report_btn"):
+            st.session_state.generate_comprehensive_report = False
+            
+    return st.session_state.get('generate_comprehensive_report', False)
