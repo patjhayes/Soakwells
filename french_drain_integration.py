@@ -140,10 +140,33 @@ def run_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_pa
     
     for filename, hydrograph_data in hydrograph_data_dict.items():
         
-        # Convert soakwell hydrograph to French drain format
+        # Create extended hydrograph for French drain (extend to 12 hours minimum for proper emptying analysis)
+        original_time_min = hydrograph_data['time_min']
+        original_flow = hydrograph_data['total_flow']
+        max_original_time = max(original_time_min)
+        
+        # Extend to at least 12 hours (720 minutes) for proper emptying analysis
+        extend_to_min = max(720, max_original_time + 480)  # At least 12 hours, or 8 hours after inflow ends
+        
+        # Create extended time series
+        extended_time_min = list(original_time_min)
+        extended_flow = list(original_flow)
+        
+        # Add emptying phase (no inflow, just drainage)
+        if max_original_time < extend_to_min:
+            # Add time points every 5 minutes for drainage phase
+            emptying_interval = 5.0  # minutes
+            t = max_original_time + emptying_interval
+            
+            while t <= extend_to_min:
+                extended_time_min.append(t)
+                extended_flow.append(0.0)  # No inflow during emptying
+                t += emptying_interval
+        
+        # Convert to French drain hydrograph format
         drain_hydrograph = {
-            'time': np.array([t * 60 for t in hydrograph_data['time_min']]),  # Convert to seconds
-            'flow': np.array(hydrograph_data['total_flow'])
+            'time': np.array([t * 60 for t in extended_time_min]),  # Convert to seconds
+            'flow': np.array(extended_flow)
         }
         
         # Run French drain simulation

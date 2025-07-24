@@ -1144,6 +1144,12 @@ def main():
         # Comprehensive report generation
         generate_comprehensive_report = add_comprehensive_report_to_sidebar()
         
+        # Debug information
+        if generate_comprehensive_report:
+            st.sidebar.success(f"🔧 DEBUG: Report flag is TRUE")
+        else:
+            st.sidebar.info(f"🔧 DEBUG: Report flag is FALSE")
+        
         # Solve functionality
         st.subheader("🔧 Comprehensive Design Solver")
         st.markdown("Test **all possible configurations** against **all storm scenarios**:")
@@ -1869,6 +1875,7 @@ def main():
                                 st.warning("Could not identify worst-case storm for report generation.")
                         
                         # Comprehensive engineering report generation
+                        st.write(f"🔧 DEBUG: generate_comprehensive_report = {generate_comprehensive_report}")
                         if generate_comprehensive_report:
                             st.markdown("---")
                             st.subheader("📋 Comprehensive Engineering Report")
