@@ -180,8 +180,8 @@ class FrenchDrainModel:
         max_trench_volume = self.trench_width * length * self.trench_depth * self.aggregate_porosity
         trench_base_area = self.trench_width * length
         
-        # Stable infiltration calculation
-        max_infiltration_rate = self.soil_k * trench_base_area / self.soil_Sr  # m³/s
+        # Stable infiltration calculation - more conservative rate
+        max_infiltration_rate = self.soil_k * trench_base_area * 0.5  # Reduce by factor of 2 for stability
         
         # Simulation loop with stable numerical integration
         for i in range(1, n_steps):
@@ -204,10 +204,13 @@ class FrenchDrainModel:
             else:
                 infiltration_outflow[i] = 0.0
             
-            # 4. Smooth outflow calculation to prevent instability
+            # 4. Smart outflow calculation to prevent over-infiltration
             max_possible_outflow = trench_volume[i-1] / dt_actual  # Can't drain more than available
-            actual_infiltration_rate = min(infiltration_outflow[i], max_possible_outflow)
-            outflow_from_trench = actual_infiltration_rate * dt_actual  # m³
+            requested_infiltration_rate = min(infiltration_outflow[i], max_possible_outflow)
+            outflow_from_trench = requested_infiltration_rate * dt_actual  # m³
+            
+            # Update actual infiltration rate for reporting
+            infiltration_outflow[i] = requested_infiltration_rate
             
             # 5. Update trench volume with stability damping
             net_volume_change = inflow_to_trench - outflow_from_trench
