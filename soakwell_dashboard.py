@@ -538,8 +538,8 @@ def solve_for_minimum_soakwells(hydrograph_data_dict, ks=1e-5, Sr=1.0, max_soakw
                             'cat3_flow': hydrograph_data.get('cat3_flow', [0.0] * len(hydrograph_data['total_flow']))
                         }
                         
-                        # Simulate single soakwell performance
-                        result = simulate_soakwell_performance(scaled_hydrograph, diameter, ks, Sr, depth, extend_to_hours=24)
+                        # Simulate single soakwell performance - extend to 72 hours for complete emptying analysis
+                        result = simulate_soakwell_performance(scaled_hydrograph, diameter, ks, Sr, depth, extend_to_hours=72)
                         
                         # Check if overflow occurs
                         peak_overflow = max(result['overflow_rate'])
@@ -845,25 +845,25 @@ def generate_configuration_report(config, hydrograph_data_dict, soil_conditions,
                     'cat3_flow': hydrograph_data.get('cat3_flow', [0.0] * len(hydrograph_data['total_flow']))
                 }
                 
-                # Simulate single soakwell
+                # Simulate single soakwell - extend to 72 hours for complete emptying analysis
                 single_result = simulate_soakwell_performance(
                     scaled_hydrograph, 
                     config['diameter'], 
                     ks, Sr, 
                     config['depth'],
-                    extend_to_hours=24
+                    extend_to_hours=72
                 )
                 
                 # Scale back to represent all soakwells
                 result = scale_multiple_soakwell_results(single_result, config['num_soakwells'], hydrograph_data)
             else:
-                # Single soakwell analysis
+                # Single soakwell analysis - extend to 72 hours for complete emptying analysis
                 result = simulate_soakwell_performance(
                     hydrograph_data, 
                     config['diameter'], 
                     ks, Sr, 
                     config['depth'],
-                    extend_to_hours=24
+                    extend_to_hours=72
                 )
             
             # Calculate performance metrics
@@ -1293,7 +1293,7 @@ def main():
                     log_messages.append(f"⚙️ Starting simulation for {filename}...")
                     
                     if num_soakwells == 1:
-                        # Single soakwell analysis
+                        # Single soakwell analysis - extend to 72 hours for complete emptying analysis
                         log_messages.append(f"📊 Running single soakwell analysis...")
                         result = simulate_soakwell_performance(
                             hydrograph_data,
@@ -1301,7 +1301,7 @@ def main():
                             ks=ks,
                             Sr=Sr,
                             max_height=depth,
-                            extend_to_hours=24
+                            extend_to_hours=72
                         )
                         log_messages.append(f"✅ Single soakwell analysis completed for {filename}")
                     else:
@@ -1313,14 +1313,14 @@ def main():
                             'total_flow': [flow / num_soakwells for flow in hydrograph_data['total_flow']]
                         }
                         
-                        # Analyze single soakwell with reduced flow
+                        # Analyze single soakwell with reduced flow - extend to 72 hours for complete emptying analysis
                         single_result = simulate_soakwell_performance(
                             modified_hydrograph,
                             diameter=diameter,
                             ks=ks,
                             Sr=Sr,
                             max_height=depth,
-                            extend_to_hours=24
+                            extend_to_hours=72
                         )
                         
                         # Scale results back to represent all soakwells
@@ -1872,11 +1872,13 @@ def main():
                         if generate_comprehensive_report:
                             st.markdown("---")
                             st.subheader("📋 Comprehensive Engineering Report")
+                            st.info(f"🔧 Generating report for {len(all_results)} storm scenarios...")
                             
                             # Find representative storm for comprehensive analysis
                             representative_storm = None
                             if worst_storm:
                                 representative_storm = worst_storm
+                                st.info(f"📊 Using worst-case storm: {representative_storm}")
                             else:
                                 # Use first available storm
                                 representative_storm = list(hydrograph_data_dict.keys())[0]

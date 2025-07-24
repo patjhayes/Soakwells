@@ -366,6 +366,7 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
                     <tr><td>Maximum Water Level</td><td>{max_level:.2f} m</td><td>{'✓ Acceptable' if max_level <= depth else '✗ Exceeds depth'}</td></tr>
                     <tr><td>Storage Utilization</td><td>{max_stored/total_volume_capacity*100:.1f}%</td><td>{'✓ Efficient' if max_stored/total_volume_capacity*100 < 80 else '⚠ High utilization'}</td></tr>
                     <tr><td>Total Overflow</td><td>{total_overflow:.1f} m³</td><td>{'✓ No overflow' if total_overflow == 0 else '✗ System overflow'}</td></tr>
+                    <tr><td>Emptying Time</td><td>{soakwell_results.get('emptying_time_minutes', 0)/60:.1f} hours</td><td>{'✓ Fast emptying' if soakwell_results.get('emptying_time_minutes', 0) < 24*60 else '⚠ Slow emptying' if soakwell_results.get('emptying_time_minutes', 0) < 48*60 else '✗ Very slow emptying'}</td></tr>
                     <tr><td>Mass Balance Check</td><td>Within tolerance</td><td>✓ Calculation verified</td></tr>
                 </table>
             </div>
@@ -654,10 +655,13 @@ def add_comprehensive_report_to_sidebar():
     # Use session state to track comprehensive report generation
     if st.sidebar.button("📄 Generate Complete Report", key="comprehensive_report_btn"):
         st.session_state.generate_comprehensive_report = True
+        st.sidebar.success("✅ Report generation triggered!")
         
     # Clear button if report has been generated
     if st.session_state.get('generate_comprehensive_report', False):
+        st.sidebar.info("📄 Report will be generated below")
         if st.sidebar.button("🗑️ Clear Report", key="clear_comprehensive_report_btn"):
             st.session_state.generate_comprehensive_report = False
+            st.sidebar.info("Report cleared")
             
     return st.session_state.get('generate_comprehensive_report', False)
