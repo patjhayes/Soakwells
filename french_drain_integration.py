@@ -38,15 +38,18 @@ def add_french_drain_sidebar():
         help="Compare with French drain infiltration system"
     )
     
-    # Add report generation button
-    generate_report = st.sidebar.button(
-        "📊 Generate Engineering Report",
-        key="generate_detailed_report",
-        help="Generate step-by-step calculation report for worst-case storm"
-    )
+    # Initialize report generation flag
+    generate_report = False
     
     if enable_french_drain:
         st.sidebar.subheader("French Drain Parameters")
+        
+        # Add report generation button within French drain section
+        generate_report = st.sidebar.button(
+            "📊 Generate Engineering Report",
+            key="generate_detailed_report",
+            help="Generate step-by-step calculation report for worst-case storm"
+        )
         
         # Pipe specifications
         pipe_diameter = st.sidebar.selectbox(

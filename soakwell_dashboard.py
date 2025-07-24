@@ -22,6 +22,7 @@ FRENCH_DRAIN_AVAILABLE = False
 try:
     from french_drain_integration import integrate_french_drain_analysis, add_french_drain_sidebar
     from report_generator import generate_calculation_report, display_mass_balance_summary
+    from comprehensive_report_generator import generate_comprehensive_engineering_report, add_comprehensive_report_to_sidebar
     FRENCH_DRAIN_AVAILABLE = True
 except ImportError as e:
     # Don't show warning in sidebar yet - wait until sidebar is created
@@ -1140,6 +1141,9 @@ def main():
         elif uploaded_files:  # Only show warning if files are uploaded
             st.warning("⚠️ French drain analysis not available - module not found")
         
+        # Comprehensive report generation
+        generate_comprehensive_report = add_comprehensive_report_to_sidebar()
+        
         # Solve functionality
         st.subheader("🔧 Comprehensive Design Solver")
         st.markdown("Test **all possible configurations** against **all storm scenarios**:")
@@ -1863,6 +1867,68 @@ def main():
                                 )
                             else:
                                 st.warning("Could not identify worst-case storm for report generation.")
+                        
+                        # Comprehensive engineering report generation
+                        if generate_comprehensive_report:
+                            st.markdown("---")
+                            st.subheader("📋 Comprehensive Engineering Report")
+                            
+                            # Find representative storm for comprehensive analysis
+                            representative_storm = None
+                            if worst_storm:
+                                representative_storm = worst_storm
+                            else:
+                                # Use first available storm
+                                representative_storm = list(hydrograph_data_dict.keys())[0]
+                            
+                            if representative_storm:
+                                # Get results for representative storm
+                                rep_sw_result = None
+                                for name, result in all_results.items():
+                                    if representative_storm in name:
+                                        rep_sw_result = result
+                                        break
+                                
+                                rep_fd_result = french_drain_results.get(representative_storm)
+                                rep_hydrograph = hydrograph_data_dict[representative_storm]
+                                
+                                # Configuration details for comprehensive report
+                                config_comprehensive = {
+                                    'soakwell_diameter': diameter,
+                                    'soakwell_depth': depth,  
+                                    'num_soakwells': num_soakwells,
+                                    'ks': ks,
+                                    'Sr': Sr,
+                                    'french_drain_length': french_drain_params.get('system_length_m', 100)
+                                }
+                                
+                                # Generate comprehensive report
+                                with st.spinner("Generating comprehensive engineering documentation..."):
+                                    comprehensive_html = generate_comprehensive_engineering_report(
+                                        rep_sw_result,
+                                        rep_fd_result, 
+                                        representative_storm,
+                                        config_comprehensive,
+                                        rep_hydrograph
+                                    )
+                                
+                                # Display report in expandable section
+                                with st.expander("📋 Complete Engineering Analysis Report", expanded=True):
+                                    st.markdown(comprehensive_html, unsafe_allow_html=True)
+                                
+                                # Download button for comprehensive report
+                                st.download_button(
+                                    label="📥 Download Complete Report as HTML",
+                                    data=comprehensive_html,
+                                    file_name=f"comprehensive_infiltration_report_{representative_storm}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.html",
+                                    mime="text/html",
+                                    key="download_comprehensive_report"
+                                )
+                                
+                                # Additional export options
+                                st.info("💡 **Tip:** The downloaded HTML file can be opened in any web browser and printed to PDF for professional documentation.")
+                            else:
+                                st.warning("No storm data available for comprehensive report generation.")
             
             # Processing log (collapsed by default)
             if 'log_messages' in locals() and log_messages:
