@@ -38,6 +38,13 @@ def add_french_drain_sidebar():
         help="Compare with French drain infiltration system"
     )
     
+    # Add report generation button
+    generate_report = st.sidebar.button(
+        "📊 Generate Engineering Report",
+        key="generate_detailed_report",
+        help="Generate step-by-step calculation report for worst-case storm"
+    )
+    
     if enable_french_drain:
         st.sidebar.subheader("French Drain Parameters")
         
@@ -82,6 +89,7 @@ def add_french_drain_sidebar():
         
         return {
             'enabled': True,
+            'generate_report': generate_report,
             'pipe_diameter_mm': pipe_diameter,
             'pipe_diameter_m': pipe_diameter / 1000,
             'pipe_slope': pipe_slope,
@@ -92,7 +100,7 @@ def add_french_drain_sidebar():
             'system_length_m': system_length
         }
     
-    return {'enabled': False}
+    return {'enabled': False, 'generate_report': generate_report}
 
 def run_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params):
     """
@@ -305,6 +313,33 @@ def display_french_drain_results(french_drain_results, french_drain_params):
     if performance_data:
         performance_df = pd.DataFrame(performance_data)
         st.dataframe(performance_df, use_container_width=True)
+        
+        # Mass balance summary
+        st.subheader("🔍 Mass Balance Verification")
+        mass_balance_data = []
+        for scenario_name, result in french_drain_results.items():
+            if result is not None and 'performance' in result:
+                perf = result['performance']
+                mass_balance_data.append({
+                    'Scenario': scenario_name,
+                    'Total Inflow (m³)': f"{perf['total_inflow_m3']:.2f}",
+                    'Total Infiltrated (m³)': f"{perf['total_infiltrated_m3']:.2f}",
+                    'Total Overflow (m³)': f"{perf['total_overflow_m3']:.2f}",
+                    'Final Stored (m³)': f"{perf['final_stored_m3']:.2f}",
+                    'Mass Balance Error (%)': f"{perf['mass_balance_error_percent']:.3f}"
+                })
+        
+        if mass_balance_data:
+            mb_df = pd.DataFrame(mass_balance_data)
+            st.dataframe(mb_df, use_container_width=True)
+            
+            # Check for mass balance issues
+            for row in mass_balance_data:
+                error_pct = float(row['Mass Balance Error (%)'])
+                if abs(error_pct) > 1.0:
+                    st.warning(f"⚠️ {row['Scenario']}: Mass balance error {error_pct:.2f}% - consider reviewing model parameters")
+                elif abs(error_pct) < 0.1:
+                    st.success(f"✅ {row['Scenario']}: Excellent mass balance ({error_pct:.3f}%)")
         
         # Individual scenario analysis
         st.subheader("📈 Detailed Scenario Analysis")

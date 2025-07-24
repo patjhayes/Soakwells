@@ -21,6 +21,7 @@ import datetime
 FRENCH_DRAIN_AVAILABLE = False
 try:
     from french_drain_integration import integrate_french_drain_analysis, add_french_drain_sidebar
+    from report_generator import generate_calculation_report, display_mass_balance_summary
     FRENCH_DRAIN_AVAILABLE = True
 except ImportError as e:
     # Don't show warning in sidebar yet - wait until sidebar is created
@@ -1798,6 +1799,70 @@ def main():
                         else:
                             st.info("⚖️ **Both systems show similar performance**")
                             st.markdown("Consider other factors like cost, installation complexity, and site constraints.")
+                        
+                        # Mass balance summary for both systems
+                        st.markdown("---")
+                        display_mass_balance_summary(sw_result, french_drain_results[list(french_drain_results.keys())[0]])
+                        
+                        # Report generation
+                        if french_drain_params.get('generate_report', False):
+                            st.markdown("---")
+                            st.subheader("📊 Engineering Calculation Report")
+                            
+                            # Find worst-case storm (highest overflow or lowest efficiency)
+                            worst_storm = None
+                            worst_metric = -1
+                            for filename in hydrograph_data_dict.keys():
+                                if filename in french_drain_results and french_drain_results[filename]:
+                                    # Use overflow volume as primary criterion
+                                    overflow = french_drain_results[filename]['performance']['total_overflow_m3']
+                                    if overflow > worst_metric:
+                                        worst_metric = overflow
+                                        worst_storm = filename
+                            
+                            if worst_storm:
+                                # Get results for worst-case storm
+                                worst_sw_result = None
+                                for name, result in all_results.items():
+                                    if worst_storm in name:
+                                        worst_sw_result = result
+                                        break
+                                
+                                worst_fd_result = french_drain_results[worst_storm]
+                                
+                                # Configuration details
+                                config = {
+                                    'soakwell_diameter': diameter,
+                                    'soakwell_depth': depth,  
+                                    'num_soakwells': num_soakwells,
+                                    'ks': ks,
+                                    'Sr': Sr,
+                                    'french_drain_length': french_drain_params.get('system_length_m', 100)
+                                }
+                                
+                                # Generate report
+                                with st.spinner("Generating detailed calculation report..."):
+                                    report_html = generate_calculation_report(
+                                        worst_sw_result,
+                                        worst_fd_result, 
+                                        worst_storm,
+                                        config
+                                    )
+                                
+                                # Display report in expandable section
+                                with st.expander("📋 Step-by-Step Calculation Report", expanded=True):
+                                    st.markdown(report_html, unsafe_allow_html=True)
+                                
+                                # Download button for report
+                                st.download_button(
+                                    label="📥 Download Report as HTML",
+                                    data=report_html,
+                                    file_name=f"infiltration_analysis_report_{worst_storm}_{datetime.now().strftime('%Y%m%d_%H%M')}.html",
+                                    mime="text/html",
+                                    key="download_report"
+                                )
+                            else:
+                                st.warning("Could not identify worst-case storm for report generation.")
             
             # Processing log (collapsed by default)
             if 'log_messages' in locals() and log_messages:

@@ -238,6 +238,11 @@ class FrenchDrainModel:
         total_inflow_volume = np.trapz(inflow, time)
         total_infiltrated = np.trapz(infiltration_outflow, time)
         total_overflow = np.trapz(system_overflow, time)
+        final_stored_volume = trench_volume[-1]
+        
+        # Mass balance check: In = Out + Stored + Error
+        mass_balance_error = total_inflow_volume - (total_infiltrated + total_overflow + final_stored_volume)
+        mass_balance_error_percent = (mass_balance_error / total_inflow_volume * 100) if total_inflow_volume > 0 else 0
         
         infiltration_efficiency = (total_infiltrated / total_inflow_volume * 100) if total_inflow_volume > 0 else 0
         
@@ -255,6 +260,9 @@ class FrenchDrainModel:
                 'total_inflow_m3': total_inflow_volume,
                 'total_infiltrated_m3': total_infiltrated,
                 'total_overflow_m3': total_overflow,
+                'final_stored_m3': final_stored_volume,
+                'mass_balance_error_m3': mass_balance_error,
+                'mass_balance_error_percent': mass_balance_error_percent,
                 'infiltration_efficiency_percent': infiltration_efficiency,
                 'max_trench_storage_m3': max(trench_volume),
                 'max_water_level_m': max(trench_water_level),

@@ -168,6 +168,16 @@ def simulate_soakwell_performance(hydrograph_data, diameter, ks=1e-5, Sr=1.0, ma
         cumulative_inflow.append(cumulative_inflow[i-1] + volume_in)
         cumulative_outflow.append(cumulative_outflow[i-1] + volume_out)
     
+    # Calculate mass balance
+    total_inflow = cumulative_inflow[-1]
+    total_outflow = cumulative_outflow[-1]
+    total_overflow = sum(overflow[i] * dt for i in range(len(overflow)))
+    final_stored = stored_volume[-1]
+    
+    # Mass balance check: In = Out + Overflow + Stored + Error
+    mass_balance_error = total_inflow - (total_outflow + total_overflow + final_stored)
+    mass_balance_error_percent = (mass_balance_error / total_inflow * 100) if total_inflow > 0 else 0
+    
     return {
         'time_min': time_min,
         'inflow_rate': inflow_rates,
@@ -177,6 +187,14 @@ def simulate_soakwell_performance(hydrograph_data, diameter, ks=1e-5, Sr=1.0, ma
         'cumulative_outflow': cumulative_outflow,
         'overflow_rate': overflow,
         'water_level': water_level,
+        'mass_balance': {
+            'total_inflow_m3': total_inflow,
+            'total_outflow_m3': total_outflow,
+            'total_overflow_m3': total_overflow,
+            'final_stored_m3': final_stored,
+            'mass_balance_error_m3': mass_balance_error,
+            'mass_balance_error_percent': mass_balance_error_percent
+        },
         'max_volume': max_volume,
         'max_height': max_height,
         'diameter': diameter
