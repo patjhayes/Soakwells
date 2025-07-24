@@ -652,16 +652,26 @@ def add_comprehensive_report_to_sidebar():
     st.sidebar.markdown("---")
     st.sidebar.subheader("📋 Engineering Documentation")
     
+    # Use a simpler session state key
+    state_key = 'comp_report_flag'
+    
+    # Debug: Show current session state
+    current_state = st.session_state.get(state_key, False)
+    st.sidebar.write(f"🔧 Current session state: {current_state}")
+    
     # Use session state to track comprehensive report generation
     if st.sidebar.button("📄 Generate Complete Report", key="comprehensive_report_btn"):
-        st.session_state.generate_comprehensive_report = True
+        st.session_state[state_key] = True
         st.sidebar.success("✅ Report generation triggered!")
+        st.sidebar.write(f"🔧 Session state set to: {st.session_state[state_key]}")
         
     # Clear button if report has been generated
-    if st.session_state.get('generate_comprehensive_report', False):
+    if st.session_state.get(state_key, False):
         st.sidebar.info("📄 Report will be generated below")
         if st.sidebar.button("🗑️ Clear Report", key="clear_comprehensive_report_btn"):
-            st.session_state.generate_comprehensive_report = False
+            st.session_state[state_key] = False
             st.sidebar.info("Report cleared")
-            
-    return st.session_state.get('generate_comprehensive_report', False)
+    
+    final_state = st.session_state.get(state_key, False)
+    st.sidebar.write(f"🔧 Returning state: {final_state}")
+    return final_state
