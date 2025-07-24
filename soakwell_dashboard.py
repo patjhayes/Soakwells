@@ -1936,6 +1936,98 @@ def main():
                     for message in log_messages:
                         st.text(message)
     
+    # Comprehensive report generation (independent of file uploads)
+    if generate_comprehensive_report:
+        st.markdown("---")
+        st.header("📋 Comprehensive Engineering Report")
+        
+        if uploaded_files and 'hydrograph_data_dict' in locals() and hydrograph_data_dict:
+            # Use actual data if available
+            representative_storm = list(hydrograph_data_dict.keys())[0]
+            rep_hydrograph = hydrograph_data_dict[representative_storm]
+            
+            # Get results for representative storm
+            rep_sw_result = None
+            rep_fd_result = None
+            if 'all_results' in locals():
+                for name, result in all_results.items():
+                    if representative_storm in name:
+                        rep_sw_result = result
+                        break
+            if 'french_drain_results' in locals():
+                rep_fd_result = french_drain_results.get(representative_storm)
+        else:
+            # Create demo data for report demonstration
+            st.info("📋 **Demo Report:** Since no storm files are uploaded, this demonstrates the comprehensive report format using sample data.")
+            representative_storm = "Demo 10% AEP Storm"
+            
+            # Create demo hydrograph
+            demo_time = list(range(0, 361, 5))  # 6 hours, 5-min intervals
+            demo_flow = [0.5 * (1 + math.sin(t/60)) * math.exp(-t/180) for t in demo_time]
+            rep_hydrograph = pd.DataFrame({
+                'Time (min)': demo_time,
+                'Flow (m³/s)': demo_flow
+            })
+            
+            # Create demo results
+            rep_sw_result = {
+                'max_depth': 1.8,
+                'overflow_volume': 2.5,
+                'total_inflow': 450.0,
+                'total_infiltrated': 447.5,
+                'mass_balance_error': 0.0,
+                'times': demo_time,
+                'depths': [0.5 + d * 0.8 for d in [f/max(demo_flow) for f in demo_flow]],
+                'overflow_rate': [max(0, f-0.8) for f in demo_flow]
+            }
+            
+            rep_fd_result = {
+                'total_inflow': 300.0,
+                'total_infiltrated': 295.0,
+                'overflow_volume': 5.0,
+                'mass_balance_error': 0.0,
+                'times': demo_time,
+                'inflow_rate': [f * 0.7 for f in demo_flow],
+                'infiltration_rate': [min(f * 0.7, 0.8) for f in demo_flow],
+                'overflow_rate': [max(0, f * 0.7 - 0.8) for f in demo_flow]
+            }
+        
+        # Configuration details for comprehensive report
+        config_comprehensive = {
+            'soakwell_diameter': diameter,
+            'soakwell_depth': depth,  
+            'num_soakwells': num_soakwells,
+            'ks': ks,
+            'Sr': Sr,
+            'french_drain_length': french_drain_params.get('system_length_m', 100)
+        }
+        
+        # Generate comprehensive report
+        with st.spinner("Generating comprehensive engineering documentation..."):
+            comprehensive_html = generate_comprehensive_engineering_report(
+                rep_sw_result,
+                rep_fd_result, 
+                representative_storm,
+                config_comprehensive,
+                rep_hydrograph
+            )
+        
+        # Display report in expandable section
+        with st.expander("📋 Complete Engineering Analysis Report", expanded=True):
+            st.markdown(comprehensive_html, unsafe_allow_html=True)
+        
+        # Download button for comprehensive report
+        st.download_button(
+            label="📥 Download Complete Report as HTML",
+            data=comprehensive_html,
+            file_name=f"comprehensive_infiltration_report_{representative_storm.replace(' ', '_')}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.html",
+            mime="text/html",
+            key="download_comprehensive_report_main"
+        )
+        
+        # Additional export options
+        st.info("💡 **Tip:** The downloaded HTML file can be opened in any web browser and printed to PDF for professional documentation.")
+    
     else:
         # Instructions when no files uploaded
         st.header("📤 Getting Started")
