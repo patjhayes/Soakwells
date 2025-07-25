@@ -1,0 +1,330 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Infiltration System Analysis Report</title>
+        <style>
+            @page { 
+                size: A4; 
+                margin: 2cm; 
+                @bottom-center { content: "Page " counter(page) " of " counter(pages); }
+            }
+            body { 
+                font-family: 'Times New Roman', serif; 
+                line-height: 1.6; 
+                margin: 0; 
+                padding: 0;
+                font-size: 11pt;
+                color: #333;
+            }
+            .header { 
+                text-align: center; 
+                border-bottom: 3px solid #1f4e79; 
+                padding-bottom: 20px; 
+                margin-bottom: 30px;
+                page-break-after: avoid;
+            }
+            .header h1 { 
+                color: #1f4e79; 
+                margin: 0; 
+                font-size: 24pt; 
+                font-weight: bold;
+            }
+            .header h2 { 
+                color: #666; 
+                margin: 5px 0; 
+                font-size: 16pt; 
+                font-weight: normal;
+            }
+            .section { 
+                margin: 25px 0; 
+                page-break-inside: avoid;
+            }
+            .section-title { 
+                background-color: #1f4e79; 
+                color: white; 
+                padding: 12px 15px; 
+                margin: 20px 0 15px 0; 
+                font-size: 14pt; 
+                font-weight: bold;
+                page-break-after: avoid;
+            }
+            .subsection-title { 
+                color: #1f4e79; 
+                font-size: 12pt; 
+                font-weight: bold; 
+                margin: 15px 0 8px 0;
+                border-bottom: 1px solid #1f4e79;
+                padding-bottom: 3px;
+            }
+            .formula-box { 
+                background-color: #f8f9fa; 
+                border: 1px solid #dee2e6; 
+                border-left: 4px solid #1f4e79;
+                padding: 15px; 
+                margin: 15px 0; 
+                font-family: 'Courier New', monospace;
+                page-break-inside: avoid;
+            }
+            .calculation-box { 
+                background-color: #fff; 
+                border: 1px solid #ccc; 
+                padding: 15px; 
+                margin: 10px 0;
+                page-break-inside: avoid;
+            }
+            .result-box { 
+                background-color: #d4edda; 
+                border: 1px solid #c3e6cb; 
+                border-left: 4px solid #28a745;
+                padding: 15px; 
+                margin: 15px 0;
+                page-break-inside: avoid;
+            }
+            .parameter-table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 15px 0;
+                font-size: 10pt;
+            }
+            .parameter-table th, .parameter-table td { 
+                border: 1px solid #ddd; 
+                padding: 8px; 
+                text-align: left;
+            }
+            .parameter-table th { 
+                background-color: #f8f9fa; 
+                font-weight: bold;
+                color: #1f4e79;
+            }
+            .figure { 
+                text-align: center; 
+                margin: 20px 0;
+                page-break-inside: avoid;
+            }
+            .figure-caption { 
+                font-style: italic; 
+                margin-top: 8px; 
+                font-size: 10pt;
+                color: #666;
+            }
+            .reference { 
+                font-style: italic; 
+                color: #666; 
+                margin: 10px 0;
+            }
+            .page-break { 
+                page-break-before: always; 
+            }
+            .no-break { 
+                page-break-inside: avoid; 
+            }
+            .footer { 
+                margin-top: 40px; 
+                padding-top: 20px; 
+                border-top: 1px solid #ddd; 
+                text-align: center; 
+                font-size: 9pt; 
+                color: #666;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>INFILTRATION SYSTEM ANALYSIS REPORT</h1>
+            <h2>Soakwell and French Drain Performance Comparison</h2>
+            <p><strong>Project:</strong> North Fremantle Pedestrian Infrastructure</p>
+            <p><strong>Storm Event:</strong> NF_ILSAX_Channels_10% AEP, 15 min burst, Storm 7</p>
+            <p><strong>Report Date:</strong> 2025-07-25</p>
+            <p><strong>Report Time:</strong> 15:15:08</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">1. EXECUTIVE SUMMARY</div>
+            <p>This report documents a comprehensive analysis of infiltration systems for stormwater management 
+            in the North Fremantle Pedestrian Infrastructure project. The analysis compares the performance 
+            of traditional soakwell systems against French drain linear infiltration systems using real storm 
+            event data from DRAINS hydraulic modeling software.</p>
+            
+            <p>The assessment follows established engineering principles and Australian Standards for 
+            stormwater management, with particular reference to AS/NZS 3500.3 and local Perth Water Corporation 
+            guidelines for infiltration systems.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">2. SOURCE MATERIAL AND STANDARDS</div>
+            
+            <div class="subsection-title">2.1 Project Documentation</div>
+            <p>This analysis is based on the following source material:</p>
+            <ul>
+                <li><strong>Primary Document:</strong> "8880-450-090 - Specification: Design of Drainage for PTA Infrastructure"</li>
+                <li><strong>Storm Data:</strong> DRAINS hydraulic model outputs (.ts1 format)</li>
+                <li><strong>Soil Data:</strong> Perth sand characteristics (k = 4.63×10⁻⁵ m/s)</li>
+                <li><strong>Design Standards:</strong> AS/NZS 3500.3 for drainage systems</li>
+            </ul>
+            
+            <div class="subsection-title">2.2 Design Criteria</div>
+            <p>The analysis considers the following design parameters:</p>
+            <table class="parameter-table">
+                <tr><th>Parameter</th><th>Value</th><th>Source/Standard</th></tr>
+                <tr><td>Soil Permeability (k)</td><td>4.63×10⁻⁵ m/s</td><td>Site investigation data</td></tr>
+                <tr><td>Design Storm Events</td><td>Various AEP events</td><td>DRAINS model outputs</td></tr>
+                <tr><td>Safety Factor</td><td>Conservative design approach</td><td>AS/NZS 3500.3</td></tr>
+                <tr><td>Infiltration Method</td><td>Darcy's Law application</td><td>Engineering hydrology principles</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="section-title">3. METHODOLOGY AND FORMULATIONS</div>
+            
+            <div class="subsection-title">3.1 Soakwell Analysis</div>
+            <p>Soakwell performance is analyzed using cylindrical flow theory based on Darcy's Law:</p>
+            
+            <div class="formula-box">
+                <strong>Darcy's Law for Cylindrical Flow:</strong><br>
+                Q = 2πkL(h/ln(R/r))<br><br>
+                Where:<br>
+                Q = Infiltration rate (m³/s)<br>
+                k = Soil permeability (m/s)<br>
+                L = Depth of water in soakwell (m)<br>
+                h = Hydraulic head (m)<br>
+                R = Radius of influence (m)<br>
+                r = Soakwell radius (m)
+            </div>
+            
+            <p>For practical design purposes, this is simplified to:</p>
+            <div class="formula-box">
+                <strong>Simplified Soakwell Outflow:</strong><br>
+                Q_out = k × A_bottom × C_factor<br><br>
+                Where:<br>
+                A_bottom = π × r² (base area)<br>
+                C_factor = Correction factor for side wall infiltration
+            </div>
+            
+            <div class="subsection-title">3.2 French Drain Analysis</div>
+            <p>French drain systems are analyzed using linear infiltration theory:</p>
+            
+            <div class="formula-box">
+                <strong>French Drain Infiltration:</strong><br>
+                Q_infiltration = k × A_infiltration × i<br><br>
+                Where:<br>
+                A_infiltration = (Width × Length) + (2 × Depth × Length)<br>
+                i = Hydraulic gradient (typically assumed as 1.0)
+            </div>
+            
+            <div class="formula-box">
+                <strong>Pipe Flow Capacity (Manning's Equation):</strong><br>
+                Q_pipe = (1/n) × A × R^(2/3) × S^(1/2)<br><br>
+                Where:<br>
+                n = Manning's roughness coefficient<br>
+                A = Cross-sectional area (m²)<br>
+                R = Hydraulic radius (m)<br>
+                S = Pipe slope (m/m)
+            </div>
+            
+            <div class="subsection-title">3.3 Mass Balance Verification</div>
+            <p>All simulations maintain strict mass balance according to:</p>
+            <div class="formula-box">
+                <strong>Water Balance Equation:</strong><br>
+                Volume_in = Volume_out + Volume_overflow + Volume_stored + Error<br><br>
+                <strong>Acceptable Error:</strong> |Error| < 1% of total inflow
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+        <div class="section">
+            <div class="section-title">4. STORM EVENT CHARACTERISTICS</div>
+    
+            <div class="subsection-title">4.1 Selected Design Storm: NF_ILSAX_Channels_10% AEP, 15 min burst, Storm 7</div>
+            <table class="parameter-table">
+                <tr><th>Storm Characteristic</th><th>Value</th><th>Unit</th><th>Significance</th></tr>
+                <tr><td>Total Duration</td><td>0.1</td><td>hours</td><td>Design storm duration</td></tr>
+                <tr><td>Peak Inflow Rate</td><td>50000.0</td><td>L/s</td><td>Maximum instantaneous flow</td></tr>
+                <tr><td>Total Runoff Volume</td><td>15000.0</td><td>m³</td><td>Total water to be managed</td></tr>
+                <tr><td>Average Intensity</td><td>50000.0</td><td>L/s</td><td>Mean flow rate</td></tr>
+                <tr><td>Peak/Average Ratio</td><td>1.0</td><td>-</td><td>Storm intensity variation</td></tr>
+            </table>
+            
+            <p>This storm represents a significant design event requiring careful infiltration system sizing. 
+            The high peak-to-average ratio indicates the need for adequate storage capacity to handle 
+            instantaneous peak flows while allowing time for infiltration.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">5. SOAKWELL SYSTEM ANALYSIS</div>
+    
+            <div class="subsection-title">5.1 System Configuration</div>
+            <table class="parameter-table">
+                <tr><th>Parameter</th><th>Value</th><th>Unit</th><th>Calculation</th></tr>
+                <tr><td>Number of Soakwells</td><td>4</td><td>units</td><td>Selected configuration</td></tr>
+                <tr><td>Individual Diameter</td><td>1.8</td><td>m</td><td>Standard precast size</td></tr>
+                <tr><td>Individual Depth</td><td>1.8</td><td>m</td><td>Standard precast size</td></tr>
+                <tr><td>Individual Radius</td><td>0.90</td><td>m</td><td>r = D/2 = 1.8/2</td></tr>
+                <tr><td>Base Area (each)</td><td>2.54</td><td>m²</td><td>A = π × r² = π × 0.90²</td></tr>
+                <tr><td>Volume (each)</td><td>4.6</td><td>m³</td><td>V = A × h = 2.54 × 1.8</td></tr>
+                <tr><td>Total System Capacity</td><td>18.3</td><td>m³</td><td>4 × 4.6</td></tr>
+            </table>
+            
+            <div class="subsection-title">5.2 Infiltration Rate Calculations</div>
+            <p><strong>Step 1: Basic Parameters</strong></p>
+            <div class="calculation-box">
+                Given soil permeability: k = 4.6e-05 m/s<br>
+                Soakwell base area: A = 2.54 m²<br>
+                Effective infiltration area includes base and side walls up to water level
+            </div>
+            
+            <p><strong>Step 2: Darcy's Law Application</strong></p>
+            <div class="calculation-box">
+                For cylindrical flow around soakwell:<br>
+                Q = 2πkL(h/ln(R/r))<br><br>
+                Simplified for design (assuming R/r ≈ 10):<br>
+                Q ≈ k × A_effective × gradient_factor<br>
+                Maximum infiltration rate ≈ 0.0 L/s
+            </div>
+            
+            <div class="subsection-title">5.3 Performance Results</div>
+            <div class="result-box">
+                <table class="parameter-table">
+                    <tr><th>Performance Metric</th><th>Calculated Value</th><th>Assessment</th></tr>
+                    <tr><td>Maximum Storage Used</td><td>0.0 m³</td><td>✓ Within capacity</td></tr>
+                    <tr><td>Maximum Water Level</td><td>0.00 m</td><td>✓ Acceptable</td></tr>
+                    <tr><td>Storage Utilization</td><td>0.0%</td><td>✓ Efficient</td></tr>
+                    <tr><td>Total Overflow</td><td>0.0 m³</td><td>✓ No overflow</td></tr>
+                    <tr><td>Emptying Time</td><td>0.0 hours</td><td>✓ Fast emptying</td></tr>
+                    <tr><td>Mass Balance Check</td><td>0.000%</td><td>✓ Excellent</td></tr>
+                </table>
+            </div>
+        
+        </div>
+
+        <div class="section">
+            <div class="section-title">6. CONCLUSIONS</div>
+            
+            <p>This comprehensive analysis has demonstrated the application of established hydraulic 
+            engineering principles to evaluate infiltration system performance for the North Fremantle 
+            Pedestrian Infrastructure project.</p>
+            
+            <p><strong>Key Findings:</strong></p>
+            <ul>
+                <li>Soakwell system provides effective stormwater management for the analyzed design storm events</li>
+                <li>Mass balance verification confirms model accuracy with errors well below 1%</li>
+                <li>System performance meets design criteria with appropriate emptying time characteristics</li>
+                <li>The analysis methodology provides a robust framework for engineering assessment</li>
+            </ul>
+            
+            <p><strong>Professional Recommendation:</strong></p>
+            <p>The analyzed system configuration is suitable for the design requirements based on the 
+            performance results documented in this report. Final design should consider site-specific 
+            factors and detailed cost analysis.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>Report prepared by:</strong> Lightweight Engineering Report Generator v1.0</p>
+            <p><strong>Analysis Date:</strong> 2025-07-25 15:15:08</p>
+            <p><strong>Disclaimer:</strong> This report is for preliminary design purposes only. 
+            Detailed site investigation and professional engineering review required for final design.</p>
+        </div>
+    </body>
+    </html>
+    

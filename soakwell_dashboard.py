@@ -1552,11 +1552,22 @@ def main():
                             st.write(f"Total Volume: {min_qty['total_volume']:.1f} m³")
                             st.write(f"Worst Case Level: {min_qty['worst_case_level']:.2f}m")
                     
-                    # Complete viable configurations table
-                    st.subheader("📋 All Viable Configurations")
+                    # Complete viable configurations table - show only minimum viable configurations
+                    st.subheader("📋 Minimum Viable Configurations")
+                    st.markdown("*Showing only the minimum number of soakwells required for each diameter/depth combination*")
                     
-                    viable_data = []
+                    # Group configurations by diameter/depth and find minimum quantity for each
+                    size_groups = {}
                     for config in comprehensive_results['viable_configurations']:
+                        size_key = (config['diameter'], config['depth'])
+                        if size_key not in size_groups:
+                            size_groups[size_key] = config
+                        elif config['num_soakwells'] < size_groups[size_key]['num_soakwells']:
+                            size_groups[size_key] = config
+                    
+                    # Create table data from minimum configurations only
+                    viable_data = []
+                    for config in size_groups.values():
                         viable_data.append({
                             'Configuration': config['configuration_name'],
                             'Diameter (m)': config['diameter'],
@@ -1569,8 +1580,35 @@ def main():
                             'Max Water Level (m)': f"{config['worst_case_level']:.2f}"
                         })
                     
+                    # Sort by quantity first, then by total cost
+                    viable_data.sort(key=lambda x: (x['Quantity'], float(x['Total Cost (AUD)'].replace('$', '').replace(',', ''))))
+                    
                     viable_df = pd.DataFrame(viable_data)
                     st.dataframe(viable_df, use_container_width=True)
+                    
+                    # Show count of configurations
+                    total_viable = len(comprehensive_results['viable_configurations'])
+                    minimum_shown = len(viable_data)
+                    st.caption(f"Showing {minimum_shown} minimum configurations out of {total_viable} total viable configurations")
+                    
+                    # Optional: Show all configurations in an expandable section
+                    with st.expander("🔍 View All Viable Configurations (including redundant larger quantities)"):
+                        all_viable_data = []
+                        for config in comprehensive_results['viable_configurations']:
+                            all_viable_data.append({
+                                'Configuration': config['configuration_name'],
+                                'Diameter (m)': config['diameter'],
+                                'Depth (m)': config['depth'],
+                                'Quantity': config['num_soakwells'],
+                                'Total Volume (m³)': f"{config['total_volume']:.1f}",
+                                'Individual Volume (m³)': f"{config['individual_volume']:.2f}",
+                                'Total Cost (AUD)': f"${config['total_cost']:.0f}",
+                                'Worst Case Storm': config['worst_case_storm'],
+                                'Max Water Level (m)': f"{config['worst_case_level']:.2f}"
+                            })
+                        
+                        all_viable_df = pd.DataFrame(all_viable_data)
+                        st.dataframe(all_viable_df, use_container_width=True)
                     
                     # Add report generation buttons for each configuration
                     st.subheader("📋 Generate Configuration Reports")
@@ -1633,40 +1671,6 @@ def main():
                         )
                         # Clear the report flag but keep the report visible
                         st.session_state.generate_report = False
-                    
-                    # Configuration analysis
-                    st.subheader("📊 Configuration Analysis")
-                    
-                    # Group by size and show minimum quantities needed
-                    size_analysis = {}
-                    for config in comprehensive_results['viable_configurations']:
-                        size_key = f"{config['diameter']:.1f}m ⌀ x {config['depth']:.1f}m"
-                        if size_key not in size_analysis:
-                            size_analysis[size_key] = {
-                                'min_quantity': config['num_soakwells'],
-                                'individual_volume': config['individual_volume'],
-                                'individual_cost': config['total_cost'] / config['num_soakwells'] if config['total_cost'] else None,
-                                'standard_size': config['standard_size']
-                            }
-                        else:
-                            size_analysis[size_key]['min_quantity'] = min(
-                                size_analysis[size_key]['min_quantity'], 
-                                config['num_soakwells']
-                            )
-                    
-                    size_data = []
-                    for size, analysis in size_analysis.items():
-                        size_data.append({
-                            'Soakwell Size': size,
-                            'Minimum Quantity': analysis['min_quantity'],
-                            'Individual Volume (m³)': f"{analysis['individual_volume']:.2f}",
-                            'Individual Cost (AUD)': f"${analysis['individual_cost']:.0f}",
-                            'Min Total Volume (m³)': f"{analysis['individual_volume'] * analysis['min_quantity']:.1f}",
-                            'Min Total Cost (AUD)': f"${analysis['individual_cost'] * analysis['min_quantity']:.0f}"
-                        })
-                    
-                    size_df = pd.DataFrame(size_data)
-                    st.dataframe(size_df, use_container_width=True)
                     
                 else:
                     st.error("❌ **No viable configurations found!**")
@@ -1877,67 +1881,101 @@ def main():
                         # Comprehensive engineering report generation
                         st.write(f"🔧 DEBUG: generate_comprehensive_report = {generate_comprehensive_report}")
                         if generate_comprehensive_report:
-                            st.markdown("---")
-                            st.subheader("📋 Comprehensive Engineering Report")
-                            st.info(f"🔧 Generating report for {len(all_results)} storm scenarios...")
+                            try:
+                                st.markdown("---")
+                                st.subheader("📋 Comprehensive Engineering Report")
+                                st.info(f"🔧 Generating report for {len(all_results)} storm scenarios...")
+                                
+                                # Find representative storm for comprehensive analysis
+                                representative_storm = None
+                                if worst_storm:
+                                    representative_storm = worst_storm
+                                    st.info(f"📊 Using worst-case storm: {representative_storm}")
+                                else:
+                                    # Use first available storm
+                                    representative_storm = list(hydrograph_data_dict.keys())[0]
+                                    st.info(f"📊 Using first available storm: {representative_storm}")
                             
-                            # Find representative storm for comprehensive analysis
-                            representative_storm = None
-                            if worst_storm:
-                                representative_storm = worst_storm
-                                st.info(f"📊 Using worst-case storm: {representative_storm}")
-                            else:
-                                # Use first available storm
-                                representative_storm = list(hydrograph_data_dict.keys())[0]
+                                if representative_storm:
+                                    # Get results for representative storm
+                                    rep_sw_result = None
+                                    for name, result in all_results.items():
+                                        if representative_storm in name:
+                                            rep_sw_result = result
+                                            break
+                                    
+                                    rep_fd_result = french_drain_results.get(representative_storm)
+                                    rep_hydrograph = hydrograph_data_dict[representative_storm]
+                                    
+                                    st.info(f"🔧 Found soakwell result: {rep_sw_result is not None}")
+                                    st.info(f"🔧 Found french drain result: {rep_fd_result is not None}")
+                                    
+                                    # Debug: Show data structure details
+                                    if rep_sw_result:
+                                        st.info(f"🔧 Soakwell result type: {type(rep_sw_result)}")
+                                        st.info(f"🔧 Soakwell result keys: {list(rep_sw_result.keys()) if isinstance(rep_sw_result, dict) else 'Not a dict'}")
+                                    
+                                    if rep_fd_result:
+                                        st.info(f"🔧 French drain result type: {type(rep_fd_result)}")
+                                        st.info(f"🔧 French drain result keys: {list(rep_fd_result.keys()) if isinstance(rep_fd_result, dict) else 'Not a dict'}")
+                                    
+                                    st.info(f"🔧 Representative storm: {representative_storm}")
+                                    st.info(f"🔧 Hydrograph type: {type(rep_hydrograph)}")
+                                    
+                                    # Configuration details for comprehensive report
+                                    config_comprehensive = {
+                                        'soakwell_diameter': diameter,
+                                        'soakwell_depth': depth,  
+                                        'num_soakwells': num_soakwells,
+                                        'ks': ks,
+                                        'Sr': Sr,
+                                        'french_drain_length': french_drain_params.get('system_length_m', 100)
+                                    }
+                                    
+                                    st.info(f"🔧 Config: {config_comprehensive}")
+                                    
+                                    # Generate comprehensive report
+                                    st.info("🔧 Starting comprehensive report generation...")
+                                    try:
+                                        comprehensive_html = generate_comprehensive_engineering_report(
+                                            rep_sw_result,
+                                            rep_fd_result, 
+                                            representative_storm,
+                                            config_comprehensive,
+                                            rep_hydrograph
+                                        )
+                                        st.success(f"✅ Report generated! Length: {len(comprehensive_html)} characters")
+                                        
+                                        # Display report in expandable section
+                                        with st.expander("📋 Complete Engineering Analysis Report", expanded=True):
+                                            st.markdown(comprehensive_html, unsafe_allow_html=True)
+                                        
+                                        # Download button for comprehensive report
+                                        st.download_button(
+                                            label="📥 Download Complete Report as HTML",
+                                            data=comprehensive_html,
+                                            file_name=f"comprehensive_infiltration_report_{representative_storm}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.html",
+                                            mime="text/html",
+                                            key="download_comprehensive_report"
+                                        )
+                                        
+                                        # Additional export options
+                                        st.info("💡 **Tip:** The downloaded HTML file can be opened in any web browser and printed to PDF for professional documentation.")
+                                        
+                                    except Exception as report_error:
+                                        st.error(f"🚨 Report generation failed: {str(report_error)}")
+                                        st.error(f"🔧 Error type: {type(report_error).__name__}")
+                                        import traceback
+                                        st.error(f"🔧 Full traceback: {traceback.format_exc()}")
+                                    
+                                else:
+                                    st.warning("No storm data available for comprehensive report generation.")
                             
-                            if representative_storm:
-                                # Get results for representative storm
-                                rep_sw_result = None
-                                for name, result in all_results.items():
-                                    if representative_storm in name:
-                                        rep_sw_result = result
-                                        break
-                                
-                                rep_fd_result = french_drain_results.get(representative_storm)
-                                rep_hydrograph = hydrograph_data_dict[representative_storm]
-                                
-                                # Configuration details for comprehensive report
-                                config_comprehensive = {
-                                    'soakwell_diameter': diameter,
-                                    'soakwell_depth': depth,  
-                                    'num_soakwells': num_soakwells,
-                                    'ks': ks,
-                                    'Sr': Sr,
-                                    'french_drain_length': french_drain_params.get('system_length_m', 100)
-                                }
-                                
-                                # Generate comprehensive report
-                                with st.spinner("Generating comprehensive engineering documentation..."):
-                                    comprehensive_html = generate_comprehensive_engineering_report(
-                                        rep_sw_result,
-                                        rep_fd_result, 
-                                        representative_storm,
-                                        config_comprehensive,
-                                        rep_hydrograph
-                                    )
-                                
-                                # Display report in expandable section
-                                with st.expander("📋 Complete Engineering Analysis Report", expanded=True):
-                                    st.markdown(comprehensive_html, unsafe_allow_html=True)
-                                
-                                # Download button for comprehensive report
-                                st.download_button(
-                                    label="📥 Download Complete Report as HTML",
-                                    data=comprehensive_html,
-                                    file_name=f"comprehensive_infiltration_report_{representative_storm}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.html",
-                                    mime="text/html",
-                                    key="download_comprehensive_report"
-                                )
-                                
-                                # Additional export options
-                                st.info("💡 **Tip:** The downloaded HTML file can be opened in any web browser and printed to PDF for professional documentation.")
-                            else:
-                                st.warning("No storm data available for comprehensive report generation.")
+                            except Exception as e:
+                                st.error(f"🚨 Error generating comprehensive report: {str(e)}")
+                                st.error(f"🔧 Error type: {type(e).__name__}")
+                                import traceback
+                                st.error(f"🔧 Traceback: {traceback.format_exc()}")
             
             # Processing log (collapsed by default)
             if 'log_messages' in locals() and log_messages:

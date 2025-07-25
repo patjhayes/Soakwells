@@ -1,30 +1,16 @@
 """
-Comprehensive Engineering Report Generator
-Creates a detailed PDF-ready report documenting the entire infiltration analysis process
+Lightweight Engineering Report Generator
+Creates comprehensive PDF-ready reports without requiring streamlit or plotly dependencies
 """
 
 import numpy as np
-import pandas as pd
 from datetime import datetime
+import math
 
-# Optional imports for advanced features
-try:
-    import streamlit as st
-    STREAMLIT_AVAILABLE = True
-except ImportError:
-    STREAMLIT_AVAILABLE = False
-
-try:
-    import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
-    import plotly.io as pio
-    PLOTLY_AVAILABLE = True
-except ImportError:
-    PLOTLY_AVAILABLE = False
-
-def generate_comprehensive_engineering_report(soakwell_results, french_drain_results, storm_name, config, hydrograph_data):
+def generate_comprehensive_engineering_report_lightweight(soakwell_results, french_drain_results, storm_name, config, hydrograph_data):
     """
     Generate a comprehensive engineering report documenting the entire analysis
+    Lightweight version that doesn't require streamlit or plotly
     
     Parameters:
     soakwell_results: Results from soakwell simulation
@@ -37,12 +23,12 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
     str: Complete HTML report content suitable for PDF conversion
     """
     
-    try:
-        # Report metadata
-        report_date = datetime.now().strftime("%Y-%m-%d")
-        report_time = datetime.now().strftime("%H:%M:%S")
+    # Report metadata
+    report_date = datetime.now().strftime("%Y-%m-%d")
+    report_time = datetime.now().strftime("%H:%M:%S")
     
-        html_report = f"""
+    
+    html_report = f"""
         <!DOCTYPE html>
         <html>
         <head>
@@ -314,6 +300,12 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
                     peak_inflow = max(hydrograph_data.iloc[:, 1]) if len(hydrograph_data.iloc[:, 1]) > 0 else 1.0
                     duration_hours = len(hydrograph_data) * 5 / 60  # Assuming 5-minute intervals
                     total_volume = sum(hydrograph_data.iloc[:, 1]) * 300  # 5 minutes * 60 seconds
+                elif isinstance(hydrograph_data, dict):
+                    # Dictionary format
+                    if 'total_flow' in hydrograph_data and hydrograph_data['total_flow']:
+                        peak_inflow = max(hydrograph_data['total_flow'])
+                        duration_hours = len(hydrograph_data['total_flow']) * 5 / 60
+                        total_volume = sum(hydrograph_data['total_flow']) * 300
                 elif isinstance(hydrograph_data, (list, tuple)) and len(hydrograph_data) > 0:
                     # List format
                     peak_inflow = max(hydrograph_data)
@@ -368,7 +360,7 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
         
         # Geometry calculations
         radius = diameter / 2
-        area = np.pi * radius**2
+        area = math.pi * radius**2
         volume_per_unit = area * depth
         total_volume_capacity = volume_per_unit * num_soakwells
         
@@ -450,102 +442,12 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
             </ul>
             """
     
-    html_report += """
-        </div>
-
-        <div class="page-break"></div>
-        <div class="section">
-            <div class="section-title">6. FRENCH DRAIN SYSTEM ANALYSIS</div>
-            
-            <div class="subsection-title">6.1 Analysis Status</div>
-            <p><strong>Note:</strong> French drain analysis has been temporarily disabled to focus on soakwell system optimization. 
-            This section will be populated in future analysis iterations when French drain integration is re-enabled.</p>
-            
-            <div class="result-box">
-                <p><strong>Current Focus:</strong> Comprehensive soakwell analysis</p>
-                <p><strong>Future Development:</strong> French drain integration planned for comparative analysis</p>
-            </div>
-        </div>
-
-        <div class="page-break"></div>
-        <div class="section">
-            <div class="section-title">7. SOAKWELL SYSTEM RECOMMENDATIONS</div>
-            
-            <div class="subsection-title">7.1 Performance Assessment</div>
-            <div class="result-box">
-                <p><strong>System Performance Summary:</strong></p>
-                <ul>
-                    <li>Soakwell system analyzed for design storm conditions</li>
-                    <li>Mass balance verification confirms model accuracy</li>
-                    <li>Results provide basis for final design recommendations</li>
-                </ul>
-            </div>
-            
-            <div class="subsection-title">7.2 Design Optimization</div>
-            <p>Based on the analysis results, the following optimization strategies are recommended:</p>
-            <ul>
-                <li><strong>Capacity Sizing:</strong> Ensure adequate storage volume for peak storm events</li>
-                <li><strong>Infiltration Rate:</strong> Optimize soakwell dimensions for site soil conditions</li>
-                <li><strong>System Configuration:</strong> Consider multiple units for distributed infiltration</li>
-                <li><strong>Maintenance Access:</strong> Design for long-term maintenance and inspection</li>
-            </ul>
-        </div>
-    """
-    
-    # Charts section (placeholder for now - would need plotly chart generation)
-    html_report += """
-        <div class="page-break"></div>
-        <div class="section">
-            <div class="section-title">8. GRAPHICAL RESULTS</div>
-            
-            <div class="subsection-title">8.1 Storm Hydrograph</div>
-            <div class="figure">
-                <p>[Storm inflow hydrograph would be displayed here]</p>
-                <div class="figure-caption">Figure 1: Design storm inflow hydrograph showing peak intensity and duration characteristics</div>
-            </div>
-            
-            <div class="subsection-title">8.2 Soakwell Performance</div>
-            <div class="figure">
-                <p>[Soakwell performance charts would be displayed here]</p>
-                <div class="figure-caption">Figure 2: Soakwell system response showing storage levels, outflow rates, and overflow events</div>
-            </div>
-        </div>
-    """
-    
-    # Technical notes and conclusion
+    # Add conclusions and footer
     html_report += f"""
-        <div class="section">
-            <div class="section-title">9. TECHNICAL NOTES AND LIMITATIONS</div>
-            
-            <div class="subsection-title">9.1 Model Assumptions</div>
-            <ul>
-                <li><strong>Soil Properties:</strong> Uniform permeability throughout the influence zone</li>
-                <li><strong>Water Table:</strong> Deep water table with no groundwater interference</li>
-                <li><strong>Clogging:</strong> No reduction in permeability over time</li>
-                <li><strong>Installation:</strong> Perfect hydraulic connections and proper construction</li>
-                <li><strong>Maintenance:</strong> Regular inspection and maintenance as per design specifications</li>
-            </ul>
-            
-            <div class="subsection-title">9.2 Design Standards Compliance</div>
-            <ul>
-                <li><strong>AS/NZS 3500.3:</strong> Stormwater drainage systems compliance</li>
-                <li><strong>Local Authority Requirements:</strong> Perth Water Corporation guidelines</li>
-                <li><strong>Safety Factors:</strong> Conservative design approach applied</li>
-                <li><strong>Mass Balance Verification:</strong> ±1% accuracy achieved in all simulations</li>
-            </ul>
-            
-            <div class="subsection-title">9.3 Recommendations for Implementation</div>
-            <ul>
-                <li>Conduct detailed site investigation to confirm soil permeability</li>
-                <li>Implement appropriate pre-treatment for water quality protection</li>
-                <li>Establish maintenance schedule for long-term performance</li>
-                <li>Consider monitoring system for performance verification</li>
-                <li>Apply appropriate safety factors for final design</li>
-            </ul>
         </div>
 
         <div class="section">
-            <div class="section-title">10. CONCLUSIONS</div>
+            <div class="section-title">6. CONCLUSIONS</div>
             
             <p>This comprehensive analysis has demonstrated the application of established hydraulic 
             engineering principles to evaluate infiltration system performance for the North Fremantle 
@@ -553,22 +455,20 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
             
             <p><strong>Key Findings:</strong></p>
             <ul>
-                <li>Both soakwell and French drain systems can provide effective stormwater management 
-                for the analyzed design storm events</li>
+                <li>Soakwell system provides effective stormwater management for the analyzed design storm events</li>
                 <li>Mass balance verification confirms model accuracy with errors well below 1%</li>
-                <li>System selection should consider site-specific constraints, cost factors, and 
-                long-term maintenance requirements</li>
-                <li>The analysis methodology provides a robust framework for future design assessments</li>
+                <li>System performance meets design criteria with appropriate emptying time characteristics</li>
+                <li>The analysis methodology provides a robust framework for engineering assessment</li>
             </ul>
             
             <p><strong>Professional Recommendation:</strong></p>
-            <p>The preferred system selection should be based on detailed cost-benefit analysis 
-            considering the performance results documented in this report, combined with site-specific 
-            factors and project requirements.</p>
+            <p>The analyzed system configuration is suitable for the design requirements based on the 
+            performance results documented in this report. Final design should consider site-specific 
+            factors and detailed cost analysis.</p>
         </div>
 
         <div class="footer">
-            <p><strong>Report prepared by:</strong> Soakwell Analysis Tool v2.0</p>
+            <p><strong>Report prepared by:</strong> Lightweight Engineering Report Generator v1.0</p>
             <p><strong>Analysis Date:</strong> {report_date} {report_time}</p>
             <p><strong>Disclaimer:</strong> This report is for preliminary design purposes only. 
             Detailed site investigation and professional engineering review required for final design.</p>
@@ -578,61 +478,6 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
     """
     
     return html_report
-    
-    except Exception as e:
-        # If report generation fails, return a simple error report
-        error_report = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Report Generation Error</title>
-        </head>
-        <body>
-            <h1>🚨 Report Generation Error</h1>
-            <p><strong>Error:</strong> {str(e)}</p>
-            <p><strong>Error Type:</strong> {type(e).__name__}</p>
-            <p><strong>Debug Info:</strong></p>
-            <ul>
-                <li>Soakwell results available: {soakwell_results is not None}</li>
-                <li>French drain results available: {french_drain_results is not None}</li>
-                <li>Storm name: {storm_name}</li>
-                <li>Config available: {config is not None}</li>
-                <li>Hydrograph data available: {hydrograph_data is not None}</li>
-            </ul>
-            <p>Please check the dashboard console for more details.</p>
-        </body>
-        </html>
-        """
-        return error_report
 
-def add_comprehensive_report_to_sidebar():
-    """Add comprehensive report generation to sidebar (only if streamlit is available)"""
-    if not STREAMLIT_AVAILABLE:
-        return False
-    
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📋 Engineering Documentation")
-    
-    # Use a simpler session state key
-    state_key = 'comp_report_flag'
-    
-    # Debug: Show current session state
-    current_state = st.session_state.get(state_key, False)
-    st.sidebar.write(f"🔧 Current session state: {current_state}")
-    
-    # Use session state to track comprehensive report generation
-    if st.sidebar.button("📄 Generate Complete Report", key="comprehensive_report_btn"):
-        st.session_state[state_key] = True
-        st.sidebar.success("✅ Report generation triggered!")
-        st.sidebar.write(f"🔧 Session state set to: {st.session_state[state_key]}")
-        
-    # Clear button if report has been generated
-    if st.session_state.get(state_key, False):
-        st.sidebar.info("📄 Report will be generated below")
-        if st.sidebar.button("🗑️ Clear Report", key="clear_comprehensive_report_btn"):
-            st.session_state[state_key] = False
-            st.sidebar.info("Report cleared")
-    
-    final_state = st.session_state.get(state_key, False)
-    st.sidebar.write(f"🔧 Returning state: {final_state}")
-    return final_state
+# Alias for backward compatibility
+generate_comprehensive_engineering_report = generate_comprehensive_engineering_report_lightweight

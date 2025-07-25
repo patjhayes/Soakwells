@@ -1,0 +1,14 @@
+Infiltration System Analysis Summary
+Generated: 2025-07-25 15:15:09
+Storm: North_Freo_Pipes_10% AEP, 96 hour burst, Storm 8
+
+Configuration:
+  soakwell_diameter: 1.8
+  soakwell_depth: 1.8
+  num_soakwells: 4
+  ks: 4.63e-05
+  Sr: 1.0
+  french_drain_length: 10.0
+  french_drain_enabled: True
+
+Full report: Infiltration_Analysis_North_Freo_Pipes_10pct_AEP_96_hour_burst_Storm_8_20250725_151509.html
