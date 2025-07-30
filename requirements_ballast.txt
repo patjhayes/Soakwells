@@ -1,0 +1,4 @@
+# Additional requirements for ballast storage analysis
+scipy>=1.7.0
+beautifulsoup4>=4.9.0
+lxml>=4.6.0  # Required by beautifulsoup4 for HTML parsing

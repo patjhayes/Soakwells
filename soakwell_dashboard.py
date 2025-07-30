@@ -31,6 +31,19 @@ except Exception as e:
     # Handle any other import errors
     pass
 
+# Ballast storage integration (with robust error handling)
+BALLAST_AVAILABLE = False
+try:
+    from ballast_storage_analysis import BallastStorageAnalyzer
+    from ballast_integration import add_ballast_storage_ui, run_ballast_analysis, display_ballast_results
+    BALLAST_AVAILABLE = True
+except ImportError as e:
+    # Will show warning in sidebar if user tries to use ballast features
+    pass
+except Exception as e:
+    # Handle any other import errors
+    pass
+
 # Set page config
 st.set_page_config(
     page_title="Soakwell Design Dashboard",
@@ -1141,6 +1154,13 @@ def main():
         elif uploaded_files:  # Only show warning if files are uploaded
             st.warning("⚠️ French drain analysis not available - module not found")
         
+        # Ballast storage analysis toggle
+        ballast_config = {'enable_ballast': False}
+        if BALLAST_AVAILABLE:
+            ballast_config = add_ballast_storage_ui()
+        elif uploaded_files:  # Only show warning if files are uploaded
+            st.warning("⚠️ Ballast storage analysis not available - install requirements: pip install scipy beautifulsoup4 lxml")
+        
         # Comprehensive report generation
         generate_comprehensive_report = add_comprehensive_report_to_sidebar()
         
@@ -1217,6 +1237,7 @@ def main():
         
         # Process uploaded files
         hydrograph_data_dict = {}
+        ballast_results_dict = {}  # Initialize ballast results dictionary
         file_summaries = []
         
         # Create a container for log messages
@@ -1737,6 +1758,58 @@ def main():
                 **Manufacturer Data:** Prices and specifications from www.soakwells.com (Perth Soakwells)
                 """)
             
+            # Ballast Storage Analysis Integration
+            if BALLAST_AVAILABLE and ballast_config['enable_ballast']:
+                st.markdown("---")
+                st.header("🚂 Ballast Storage Analysis")
+                st.markdown("""
+                **Enhanced flood modeling** analyzing soakwell overflow into rail formation ballast during extreme events.
+                This analysis determines maximum flood elevations for rare storms using 12D stage-storage relationships.
+                """)
+                
+                # Configure soakwell parameters for ballast analysis
+                soakwell_config = {
+                    'soakwell_diameter': diameter,
+                    'soakwell_depth': depth,
+                    'num_soakwells': num_soakwells,
+                    'ks': ks
+                }
+                
+                # Run ballast analysis for each storm scenario
+                progress_bar_ballast = st.progress(0)
+                status_text_ballast = st.empty()
+                
+                total_scenarios = len(hydrograph_data_dict)
+                for i, (filename, hydrograph_data) in enumerate(hydrograph_data_dict.items()):
+                    progress = (i + 1) / total_scenarios
+                    progress_bar_ballast.progress(progress)
+                    status_text_ballast.text(f"Running ballast analysis: {filename} ({i+1}/{total_scenarios})")
+                    
+                    # Find corresponding soakwell results
+                    scenario_name = f"{filename} ({diameter}m × {depth}m × {num_soakwells})"
+                    if scenario_name in all_results:
+                        try:
+                            ballast_result = run_ballast_analysis(
+                                all_results[scenario_name],
+                                hydrograph_data,
+                                soakwell_config,
+                                ballast_config
+                            )
+                            if ballast_result:
+                                ballast_results_dict[filename] = ballast_result
+                        except Exception as e:
+                            st.warning(f"⚠️ Ballast analysis failed for {filename}: {str(e)}")
+                
+                # Clear progress indicators
+                progress_bar_ballast.empty()
+                status_text_ballast.empty()
+                
+                # Display ballast results
+                if ballast_results_dict:
+                    display_ballast_results(ballast_results_dict)
+                else:
+                    st.warning("⚠️ No ballast storage results generated. Check configuration and data.")
+            
             # French Drain Integration
             if FRENCH_DRAIN_AVAILABLE and french_drain_params['enabled']:
                 st.markdown("---")
@@ -1937,12 +2010,19 @@ def main():
                                     # Generate comprehensive report
                                     st.info("🔧 Starting comprehensive report generation...")
                                     try:
+                                        # Get ballast results for representative storm if available
+                                        rep_ballast_result = None
+                                        if ballast_results_dict and representative_storm in ballast_results_dict:
+                                            rep_ballast_result = ballast_results_dict[representative_storm]
+                                            st.info(f"🔧 Including ballast analysis in report")
+                                        
                                         comprehensive_html = generate_comprehensive_engineering_report(
                                             rep_sw_result,
                                             rep_fd_result, 
                                             representative_storm,
                                             config_comprehensive,
-                                            rep_hydrograph
+                                            rep_hydrograph,
+                                            ballast_results=rep_ballast_result
                                         )
                                         st.success(f"✅ Report generated! Length: {len(comprehensive_html)} characters")
                                         
