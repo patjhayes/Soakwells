@@ -37,12 +37,11 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
     str: Complete HTML report content suitable for PDF conversion
     """
     
-    try:
-        # Report metadata
-        report_date = datetime.now().strftime("%Y-%m-%d")
-        report_time = datetime.now().strftime("%H:%M:%S")
-    
-        html_report = f"""
+    # Report metadata
+    report_date = datetime.now().strftime("%Y-%m-%d")
+    report_time = datetime.now().strftime("%H:%M:%S")
+
+    html_report = f"""
         <!DOCTYPE html>
         <html>
         <head>
@@ -279,6 +278,7 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
         <div class="page-break"></div>
         <div class="section">
             <div class="section-title">4. STORM EVENT CHARACTERISTICS</div>
+        </div>
     """
     
     # Add storm event analysis - handle actual soakwell result structure with robust error handling
@@ -578,32 +578,7 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
     """
     
     return html_report
-    
-    except Exception as e:
-        # If report generation fails, return a simple error report
-        error_report = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Report Generation Error</title>
-        </head>
-        <body>
-            <h1>🚨 Report Generation Error</h1>
-            <p><strong>Error:</strong> {str(e)}</p>
-            <p><strong>Error Type:</strong> {type(e).__name__}</p>
-            <p><strong>Debug Info:</strong></p>
-            <ul>
-                <li>Soakwell results available: {soakwell_results is not None}</li>
-                <li>French drain results available: {french_drain_results is not None}</li>
-                <li>Storm name: {storm_name}</li>
-                <li>Config available: {config is not None}</li>
-                <li>Hydrograph data available: {hydrograph_data is not None}</li>
-            </ul>
-            <p>Please check the dashboard console for more details.</p>
-        </body>
-        </html>
-        """
-        return error_report
+
 
 def add_comprehensive_report_to_sidebar():
     """Add comprehensive report generation to sidebar (only if streamlit is available)"""
