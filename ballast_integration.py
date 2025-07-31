@@ -15,10 +15,17 @@ try:
     BALLAST_ANALYSIS_AVAILABLE = True
 except ImportError:
     BALLAST_ANALYSIS_AVAILABLE = False
-    st.warning("⚠️ Advanced ballast analysis features require additional packages (scipy, beautifulsoup4)")
+    # Note: Don't call st.warning here - it will be handled in the UI functions
 
 def add_ballast_storage_ui():
     """Add ballast storage configuration to the Streamlit UI"""
+    
+    # Check if ballast analysis is available
+    if not BALLAST_ANALYSIS_AVAILABLE:
+        with st.expander("🚂 Rail Formation Ballast Storage", expanded=False):
+            st.warning("⚠️ Ballast storage analysis not available - install requirements: pip install scipy beautifulsoup4 lxml")
+            st.info("This feature requires additional packages for 12D HTML parsing and scientific computing.")
+            return {'enable_ballast': False}
     
     with st.expander("🚂 Rail Formation Ballast Storage", expanded=False):
         st.markdown("""

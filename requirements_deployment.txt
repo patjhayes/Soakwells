@@ -1,0 +1,14 @@
+# Streamlit Cloud Deployment Requirements
+# Core dashboard dependencies
+streamlit>=1.28.0
+pandas>=1.5.0
+numpy>=1.21.0
+plotly>=5.0.0
+
+# Ballast storage analysis dependencies
+scipy>=1.9.0
+beautifulsoup4>=4.11.0
+lxml>=4.9.0
+
+# Additional scientific computing
+matplotlib>=3.5.0

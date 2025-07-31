@@ -1,0 +1,17 @@
+# Streamlit App Configuration
+# This file helps Streamlit Cloud better understand the app requirements
+
+# Python Version
+python = ">=3.9,<3.12"
+
+# App Information
+[tool.streamlit]
+title = "Soakwell Design Dashboard"
+description = "Interactive dashboard for soakwell analysis and rail infrastructure flood modeling"
+author = "North Fremantle Pedestrian Infrastructure Project"
+
+# Performance
+[tool.streamlit.config]
+maxUploadSize = 200
+
+# Dependencies are handled by requirements.txt
