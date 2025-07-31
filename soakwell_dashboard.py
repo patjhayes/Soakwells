@@ -17,31 +17,16 @@ import tempfile
 import os
 import datetime
 
-# French drain integration (with robust error handling)
-FRENCH_DRAIN_AVAILABLE = False
+# Report generator import (with robust error handling)  
 try:
-    from french_drain_integration import integrate_french_drain_analysis, add_french_drain_sidebar
     from report_generator import generate_calculation_report, display_mass_balance_summary
     from comprehensive_report_generator import generate_comprehensive_engineering_report, add_comprehensive_report_to_sidebar
-    FRENCH_DRAIN_AVAILABLE = True
+    REPORT_GENERATOR_AVAILABLE = True
 except ImportError as e:
-    # Don't show warning in sidebar yet - wait until sidebar is created
+    REPORT_GENERATOR_AVAILABLE = False
     pass
 except Exception as e:
-    # Handle any other import errors
-    pass
-
-# Ballast storage integration (with robust error handling)
-BALLAST_AVAILABLE = False
-try:
-    from ballast_storage_analysis import BallastStorageAnalyzer
-    from ballast_integration import add_ballast_storage_ui, run_ballast_analysis, display_ballast_results
-    BALLAST_AVAILABLE = True
-except ImportError as e:
-    # Will show warning in sidebar if user tries to use ballast features
-    pass
-except Exception as e:
-    # Handle any other import errors
+    REPORT_GENERATOR_AVAILABLE = False
     pass
 
 # Set page config
@@ -632,12 +617,14 @@ def solve_for_minimum_soakwells(hydrograph_data_dict, ks=1e-5, Sr=1.0, max_soakw
 def create_performance_plots(results, scenario_name):
     """Create interactive plotly charts for soakwell performance"""
     
-    # Create subplots
+    # Create subplots with an additional plot for cumulative overflow
     fig = make_subplots(
-        rows=2, cols=2,
+        rows=3, cols=2,
         subplot_titles=('Flow Rates', 'Storage Volume', 
-                       'Water Level', 'Cumulative Volumes'),
+                       'Water Level', 'Cumulative Volumes',
+                       'Cumulative Overflow', 'Storage Efficiency'),
         specs=[[{"secondary_y": False}, {"secondary_y": False}],
+               [{"secondary_y": False}, {"secondary_y": False}],
                [{"secondary_y": False}, {"secondary_y": False}]]
     )
     
@@ -693,11 +680,43 @@ def create_performance_plots(results, scenario_name):
         row=2, col=2
     )
     
+    # Plot 5: NEW - Cumulative overflow (this is what you requested!)
+    # Calculate cumulative overflow volume
+    dt_hours = results['time_hours'][1] - results['time_hours'][0] if len(results['time_hours']) > 1 else 1/60  # Default to 1 minute
+    cumulative_overflow = []
+    total_overflow = 0
+    for overflow_rate in results['overflow_rate']:
+        total_overflow += overflow_rate * dt_hours * 3600  # Convert hours to seconds
+        cumulative_overflow.append(total_overflow)
+    
+    fig.add_trace(
+        go.Scatter(x=time_hours, y=cumulative_overflow, 
+                  name='Cumulative Overflow', line=dict(color='red', width=3)),
+        row=3, col=1
+    )
+    
+    # Add available storage capacity line for context
+    if 'max_volume' in results:
+        fig.add_hline(y=results['max_volume'], line_dash="dot", line_color="purple", 
+                      annotation_text="Available Storage", row=3, col=1)
+    
+    # Plot 6: Storage efficiency over time
+    storage_utilization = [(vol/results['max_volume']*100) if results['max_volume'] > 0 else 0 
+                          for vol in results['stored_volume']]
+    fig.add_trace(
+        go.Scatter(x=time_hours, y=storage_utilization, 
+                  name='Storage Utilization (%)', line=dict(color='darkblue', width=2)),
+        row=3, col=2
+    )
+    # Add 100% line
+    fig.add_hline(y=100, line_dash="dash", line_color="red", 
+                  annotation_text="100% Capacity", row=3, col=2)
+    
     # Update layout
     fig.update_layout(
         title_text=f"Soakwell Performance Analysis: {scenario_name}",
         title_x=0.5,
-        height=800,
+        height=1000,  # Increased height for 3 rows
         showlegend=True
     )
     
@@ -707,6 +726,8 @@ def create_performance_plots(results, scenario_name):
     fig.update_yaxes(title_text="Volume (m³)", row=1, col=2)
     fig.update_yaxes(title_text="Water Level (m)", row=2, col=1)
     fig.update_yaxes(title_text="Cumulative Volume (m³)", row=2, col=2)
+    fig.update_yaxes(title_text="Cumulative Overflow (m³)", row=3, col=1)
+    fig.update_yaxes(title_text="Storage Utilization (%)", row=3, col=2)
     
     return fig
 
@@ -1146,20 +1167,6 @@ def main():
         st.subheader("Analysis Options")
         show_individual = st.checkbox("Show individual scenario plots", True)
         show_comparison = st.checkbox("Show comparison chart", True)
-        
-        # French drain analysis toggle
-        french_drain_params = {'enabled': False}
-        if FRENCH_DRAIN_AVAILABLE:
-            french_drain_params = add_french_drain_sidebar()
-        elif uploaded_files:  # Only show warning if files are uploaded
-            st.warning("⚠️ French drain analysis not available - module not found")
-        
-        # Ballast storage analysis toggle
-        ballast_config = {'enable_ballast': False}
-        if BALLAST_AVAILABLE:
-            ballast_config = add_ballast_storage_ui()
-        elif uploaded_files:  # Only show warning if files are uploaded
-            st.warning("⚠️ Ballast storage analysis not available - install requirements: pip install scipy beautifulsoup4 lxml")
         
         # Comprehensive report generation
         generate_comprehensive_report = add_comprehensive_report_to_sidebar()
@@ -1757,305 +1764,226 @@ def main():
                 
                 **Manufacturer Data:** Prices and specifications from www.soakwells.com (Perth Soakwells)
                 """)
+        # Comprehensive report generation
+        if REPORT_GENERATOR_AVAILABLE:
+            generate_comprehensive_report = add_comprehensive_report_to_sidebar()
+        else:
+            generate_comprehensive_report = False
+            st.info("📋 Report generation available in full version")
+        
+        # Solve functionality
+        st.subheader("🔧 Comprehensive Design Solver")
+        st.markdown("Test **all possible configurations** against **all storm scenarios**:")
+        
+        standard_sizes = [0.6, 0.9, 1.2, 1.5, 1.8]
+        max_units = 30
+        
+        if st.button("🚀 Find Optimal Configuration", help="Test all size and quantity combinations"):
+            all_results = {}
             
-            # Ballast Storage Analysis Integration
-            if BALLAST_AVAILABLE and ballast_config['enable_ballast']:
-                st.markdown("---")
-                st.header("🚂 Ballast Storage Analysis")
-                st.markdown("""
-                **Enhanced flood modeling** analyzing soakwell overflow into rail formation ballast during extreme events.
-                This analysis determines maximum flood elevations for rare storms using 12D stage-storage relationships.
-                """)
-                
-                # Configure soakwell parameters for ballast analysis
-                soakwell_config = {
-                    'soakwell_diameter': diameter,
-                    'soakwell_depth': depth,
-                    'num_soakwells': num_soakwells,
-                    'ks': ks
-                }
-                
-                # Run ballast analysis for each storm scenario
-                progress_bar_ballast = st.progress(0)
-                status_text_ballast = st.empty()
-                
-                total_scenarios = len(hydrograph_data_dict)
-                for i, (filename, hydrograph_data) in enumerate(hydrograph_data_dict.items()):
-                    progress = (i + 1) / total_scenarios
-                    progress_bar_ballast.progress(progress)
-                    status_text_ballast.text(f"Running ballast analysis: {filename} ({i+1}/{total_scenarios})")
-                    
-                    # Find corresponding soakwell results
-                    scenario_name = f"{filename} ({diameter}m × {depth}m × {num_soakwells})"
-                    if scenario_name in all_results:
-                        try:
-                            ballast_result = run_ballast_analysis(
-                                all_results[scenario_name],
-                                hydrograph_data,
-                                soakwell_config,
-                                ballast_config
-                            )
-                            if ballast_result:
-                                ballast_results_dict[filename] = ballast_result
-                        except Exception as e:
-                            st.warning(f"⚠️ Ballast analysis failed for {filename}: {str(e)}")
-                
-                # Clear progress indicators
-                progress_bar_ballast.empty()
-                status_text_ballast.empty()
-                
-                # Display ballast results
-                if ballast_results_dict:
-                    display_ballast_results(ballast_results_dict)
-                else:
-                    st.warning("⚠️ No ballast storage results generated. Check configuration and data.")
+            # Initialize results storage
+            ballast_results_dict = {}  # Keep for report compatibility
             
-            # French Drain Integration
-            if FRENCH_DRAIN_AVAILABLE and french_drain_params['enabled']:
-                st.markdown("---")
-                
-                # Prepare soil parameters for French drain analysis
-                soil_params = {
-                    'ks': ks,
-                    'Sr': Sr,
-                    'soil_type': soil_type
-                }
-                
-                # Run French drain analysis with error handling for version compatibility
-                try:
-                    # Try new 3-argument version first
-                    french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params, french_drain_params)
-                except TypeError as e:
-                    # Fall back to 2-argument version for backward compatibility
-                    if "takes 2 positional arguments" in str(e):
-                        st.warning("Using backward compatibility mode for French drain analysis...")
-                        french_drain_results = integrate_french_drain_analysis(hydrograph_data_dict, soil_params)
-                    else:
-                        st.error(f"Error in French drain analysis: {str(e)}")
-                        french_drain_results = None
-                except Exception as e:
-                    st.error(f"Unexpected error in French drain analysis: {str(e)}")
-                    french_drain_results = None
-                
-                # If French drain analysis was run, offer comparison
-                if french_drain_results:
-                    st.subheader("⚖️ Soakwell vs French Drain Comparison")
-                    
-                    # Create comparison summary
-                    comparison_data = []
-                    for filename in hydrograph_data_dict.keys():
-                        if filename in all_results and filename in french_drain_results:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            total_combinations = len(standard_sizes) * len(standard_sizes) * max_units * len(hydrograph_data_dict)
+            combination_count = 0
+            
+            best_configs = []
+            
+            for diam in standard_sizes:
+                for dep in standard_sizes:
+                    for units in range(1, max_units + 1):
+                        # Quick volume check - skip obviously oversized systems
+                        total_volume = math.pi * (diam/2)**2 * dep * units
+                        max_inflow_vol = max([max(data['Flow (m3/s)']) for data in hydrograph_data_dict.values()])
+                        if total_volume > max_inflow_vol * 10000:  # Skip if way oversized
+                            combination_count += len(hydrograph_data_dict)
+                            continue
+                        
+                        for filename, hydrograph_data in hydrograph_data_dict.items():
+                            combination_count += 1
+                            progress = combination_count / total_combinations
+                            progress_bar.progress(min(progress, 1.0))
+                            status_text.text(f"Testing: {diam}m × {dep}m × {units} units - {filename}")
                             
-                            # Soakwell performance
-                            sw_result = None
-                            for name, result in all_results.items():
-                                if filename in name:
-                                    sw_result = result
-                                    break
+                            scenario_name = f"{filename} ({diam}m × {dep}m × {units})"
                             
-                            if sw_result and french_drain_results[filename]:
-                                sw_efficiency = sw_result['performance']['storage_efficiency'] * 100
-                                fd_efficiency = french_drain_results[filename]['performance']['infiltration_efficiency_percent']
+                            try:
+                                result = simulate_soakwell_performance(
+                                    hydrograph_data,
+                                    diameter=diam,
+                                    depth=dep,
+                                    num_soakwells=units,
+                                    ks=ks,
+                                    Sr=Sr
+                                )
                                 
-                                sw_overflow = "Yes" if sw_result['performance']['peak_overflow_rate'] > 0 else "No"
-                                fd_overflow = "Yes" if french_drain_results[filename]['performance']['total_overflow_m3'] > 0 else "No"
-                                
-                                comparison_data.append({
-                                    'Storm Scenario': filename,
-                                    'Soakwell Efficiency (%)': f"{sw_efficiency:.1f}",
-                                    'French Drain Efficiency (%)': f"{fd_efficiency:.1f}",
-                                    'Soakwell Overflow': sw_overflow,
-                                    'French Drain Overflow': fd_overflow,
-                                    'Better System': 'French Drain' if fd_efficiency > sw_efficiency else 'Soakwell' if sw_efficiency > fd_efficiency else 'Similar'
-                                })
+                                if result and 'performance' in result:
+                                    result['configuration'] = {
+                                        'diameter': diam,
+                                        'depth': dep,
+                                        'num_soakwells': units,
+                                        'individual_volume': math.pi * (diam/2)**2 * dep,
+                                        'total_volume': math.pi * (diam/2)**2 * dep * units
+                                    }
+                                    all_results[scenario_name] = result
+                            except Exception as e:
+                                st.warning(f"Skipped {scenario_name}: {str(e)}")
+            
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
+            
+            if all_results:
+                st.success(f"✅ Analysis complete! Tested {len(all_results)} configurations.")
+                
+                # Find best configurations
+                config_performance = {}
+                for scenario_name, result in all_results.items():
+                    config_key = f"{result['configuration']['diameter']}m × {result['configuration']['depth']}m × {result['configuration']['num_soakwells']}"
                     
-                    if comparison_data:
-                        comparison_df = pd.DataFrame(comparison_data)
-                        st.dataframe(comparison_df, use_container_width=True)
-                        
-                        # Overall recommendation
-                        fd_wins = sum(1 for row in comparison_data if row['Better System'] == 'French Drain')
-                        sw_wins = sum(1 for row in comparison_data if row['Better System'] == 'Soakwell')
-                        
-                        if fd_wins > sw_wins:
-                            st.success("🏆 **Overall Recommendation: French Drain System**")
-                            st.markdown("French drain shows better performance across most storm scenarios.")
-                        elif sw_wins > fd_wins:
-                            st.success("🏆 **Overall Recommendation: Soakwell System**")
-                            st.markdown("Soakwell system shows better performance across most storm scenarios.")
-                        else:
-                            st.info("⚖️ **Both systems show similar performance**")
-                            st.markdown("Consider other factors like cost, installation complexity, and site constraints.")
-                        
-                        # Mass balance summary for both systems
+                    if config_key not in config_performance:
+                        config_performance[config_key] = {
+                            'config': result['configuration'],
+                            'scenarios': [],
+                            'avg_efficiency': 0,
+                            'total_overflow': 0,
+                            'max_utilization': 0
+                        }
+                    
+                    perf = result['performance']
+                    config_performance[config_key]['scenarios'].append({
+                        'scenario': scenario_name,
+                        'efficiency': perf['storage_efficiency'],
+                        'overflow': perf['total_overflow_m3'],
+                        'utilization': perf['storage_utilization_percent']
+                    })
+                
+                # Calculate averages
+                for config_key, data in config_performance.items():
+                    scenarios = data['scenarios']
+                    data['avg_efficiency'] = sum(s['efficiency'] for s in scenarios) / len(scenarios)
+                    data['total_overflow'] = sum(s['overflow'] for s in scenarios)
+                    data['max_utilization'] = max(s['utilization'] for s in scenarios)
+                
+                # Sort by efficiency and minimal overflow
+                sorted_configs = sorted(config_performance.items(), 
+                                      key=lambda x: (-x[1]['avg_efficiency'], x[1]['total_overflow']))
+                
+                # Display top 10 configurations
+                st.subheader("🏆 Top 10 Configurations")
+                top_configs = []
+                for i, (config_name, data) in enumerate(sorted_configs[:10]):
+                    config = data['config']
+                    top_configs.append({
+                        'Rank': i + 1,
+                        'Configuration': config_name,
+                        'Avg Efficiency (%)': f"{data['avg_efficiency']*100:.1f}",
+                        'Total Overflow (m³)': f"{data['total_overflow']:.1f}",
+                        'Max Utilization (%)': f"{data['max_utilization']:.1f}",
+                        'Individual Volume (m³)': f"{config['individual_volume']:.2f}",
+                        'Total System Volume (m³)': f"{config['total_volume']:.1f}"
+                    })
+                
+                df_top = pd.DataFrame(top_configs)
+                st.dataframe(df_top, use_container_width=True)
+                
+                # Show individual scenario plots if requested
+                if show_individual:
+                    st.subheader("📊 Individual Scenario Analysis")
+                    for scenario_name, result in all_results.items():
+                        with st.expander(f"📈 Analysis: {scenario_name}"):
+                            # Performance metrics
+                            perf = result['performance']
+                            col1, col2, col3, col4 = st.columns(4)
+                            
+                            with col1:
+                                st.metric("Storage Efficiency", f"{perf['storage_efficiency']*100:.1f}%")
+                            with col2:
+                                st.metric("Peak Storage", f"{perf['max_stored_volume']:.1f} m³")
+                            with col3:
+                                st.metric("Total Overflow", f"{perf['total_overflow_m3']:.1f} m³")
+                            with col4:
+                                st.metric("Utilization", f"{perf['storage_utilization_percent']:.1f}%")
+                            
+                            # Performance plots
+                            fig = create_performance_plots(result, scenario_name)
+                            st.plotly_chart(fig, use_container_width=True)
+                
+                # Show comparison chart if requested
+                if show_comparison:
+                    comparison_fig = create_comparison_chart(all_results)
+                    st.plotly_chart(comparison_fig, use_container_width=True)
+                
+                # Mass balance summary if report generator available
+                if REPORT_GENERATOR_AVAILABLE and all_results:
+                    representative_result = list(all_results.values())[0]
+                    try:
+                        display_mass_balance_summary(representative_result)
+                    except Exception as e:
+                        st.warning(f"Could not display mass balance summary: {e}")
+                
+                # Comprehensive engineering report generation
+                if generate_comprehensive_report and REPORT_GENERATOR_AVAILABLE:
+                    try:
                         st.markdown("---")
-                        display_mass_balance_summary(sw_result, french_drain_results[list(french_drain_results.keys())[0]])
+                        st.subheader("📋 Comprehensive Engineering Report")
                         
-                        # Report generation
-                        if french_drain_params.get('generate_report', False):
-                            st.markdown("---")
-                            st.subheader("📊 Engineering Calculation Report")
+                        # Find representative storm for comprehensive analysis
+                        representative_storm = list(hydrograph_data_dict.keys())[0]
+                        
+                        # Get results for representative storm
+                        rep_result = None
+                        for name, result in all_results.items():
+                            if representative_storm in name:
+                                rep_result = result
+                                break
+                        
+                        if rep_result:
+                            rep_hydrograph = hydrograph_data_dict[representative_storm]
                             
-                            # Find worst-case storm (highest overflow or lowest efficiency)
-                            worst_storm = None
-                            worst_metric = -1
-                            for filename in hydrograph_data_dict.keys():
-                                if filename in french_drain_results and french_drain_results[filename]:
-                                    # Use overflow volume as primary criterion
-                                    overflow = french_drain_results[filename]['performance']['total_overflow_m3']
-                                    if overflow > worst_metric:
-                                        worst_metric = overflow
-                                        worst_storm = filename
+                            # Configuration details for comprehensive report
+                            config_comprehensive = {
+                                'soakwell_diameter': rep_result['configuration']['diameter'],
+                                'soakwell_depth': rep_result['configuration']['depth'],  
+                                'num_soakwells': rep_result['configuration']['num_soakwells'],
+                                'ks': ks,
+                                'Sr': Sr
+                            }
                             
-                            if worst_storm:
-                                # Get results for worst-case storm
-                                worst_sw_result = None
-                                for name, result in all_results.items():
-                                    if worst_storm in name:
-                                        worst_sw_result = result
-                                        break
-                                
-                                worst_fd_result = french_drain_results[worst_storm]
-                                
-                                # Configuration details
-                                config = {
-                                    'soakwell_diameter': diameter,
-                                    'soakwell_depth': depth,  
-                                    'num_soakwells': num_soakwells,
-                                    'ks': ks,
-                                    'Sr': Sr,
-                                    'french_drain_length': french_drain_params.get('system_length_m', 100)
-                                }
-                                
-                                # Generate report
-                                with st.spinner("Generating detailed calculation report..."):
-                                    report_html = generate_calculation_report(
-                                        worst_sw_result,
-                                        worst_fd_result, 
-                                        worst_storm,
-                                        config
-                                    )
+                            # Generate comprehensive report
+                            try:
+                                comprehensive_html = generate_comprehensive_engineering_report(
+                                    rep_result,
+                                    None,  # No French drain results
+                                    representative_storm,
+                                    config_comprehensive,
+                                    rep_hydrograph,
+                                    ballast_results=None  # No ballast results
+                                )
                                 
                                 # Display report in expandable section
-                                with st.expander("📋 Step-by-Step Calculation Report", expanded=True):
-                                    st.markdown(report_html, unsafe_allow_html=True)
+                                with st.expander("📋 Complete Engineering Analysis Report", expanded=True):
+                                    st.markdown(comprehensive_html, unsafe_allow_html=True)
                                 
-                                # Download button for report
+                                # Download button for comprehensive report
                                 st.download_button(
-                                    label="📥 Download Report as HTML",
-                                    data=report_html,
-                                    file_name=f"infiltration_analysis_report_{worst_storm}_{datetime.now().strftime('%Y%m%d_%H%M')}.html",
+                                    label="📥 Download Complete Report as HTML",
+                                    data=comprehensive_html,
+                                    file_name=f"soakwell_analysis_report_{representative_storm}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.html",
                                     mime="text/html",
-                                    key="download_report"
+                                    key="download_comprehensive_report"
                                 )
-                            else:
-                                st.warning("Could not identify worst-case storm for report generation.")
-                        
-                        # Comprehensive engineering report generation
-                        st.write(f"🔧 DEBUG: generate_comprehensive_report = {generate_comprehensive_report}")
-                        if generate_comprehensive_report:
-                            try:
-                                st.markdown("---")
-                                st.subheader("📋 Comprehensive Engineering Report")
-                                st.info(f"🔧 Generating report for {len(all_results)} storm scenarios...")
                                 
-                                # Find representative storm for comprehensive analysis
-                                representative_storm = None
-                                if worst_storm:
-                                    representative_storm = worst_storm
-                                    st.info(f"📊 Using worst-case storm: {representative_storm}")
-                                else:
-                                    # Use first available storm
-                                    representative_storm = list(hydrograph_data_dict.keys())[0]
-                                    st.info(f"📊 Using first available storm: {representative_storm}")
-                            
-                                if representative_storm:
-                                    # Get results for representative storm
-                                    rep_sw_result = None
-                                    for name, result in all_results.items():
-                                        if representative_storm in name:
-                                            rep_sw_result = result
-                                            break
-                                    
-                                    rep_fd_result = french_drain_results.get(representative_storm)
-                                    rep_hydrograph = hydrograph_data_dict[representative_storm]
-                                    
-                                    st.info(f"🔧 Found soakwell result: {rep_sw_result is not None}")
-                                    st.info(f"🔧 Found french drain result: {rep_fd_result is not None}")
-                                    
-                                    # Debug: Show data structure details
-                                    if rep_sw_result:
-                                        st.info(f"🔧 Soakwell result type: {type(rep_sw_result)}")
-                                        st.info(f"🔧 Soakwell result keys: {list(rep_sw_result.keys()) if isinstance(rep_sw_result, dict) else 'Not a dict'}")
-                                    
-                                    if rep_fd_result:
-                                        st.info(f"🔧 French drain result type: {type(rep_fd_result)}")
-                                        st.info(f"🔧 French drain result keys: {list(rep_fd_result.keys()) if isinstance(rep_fd_result, dict) else 'Not a dict'}")
-                                    
-                                    st.info(f"🔧 Representative storm: {representative_storm}")
-                                    st.info(f"🔧 Hydrograph type: {type(rep_hydrograph)}")
-                                    
-                                    # Configuration details for comprehensive report
-                                    config_comprehensive = {
-                                        'soakwell_diameter': diameter,
-                                        'soakwell_depth': depth,  
-                                        'num_soakwells': num_soakwells,
-                                        'ks': ks,
-                                        'Sr': Sr,
-                                        'french_drain_length': french_drain_params.get('system_length_m', 100)
-                                    }
-                                    
-                                    st.info(f"🔧 Config: {config_comprehensive}")
-                                    
-                                    # Generate comprehensive report
-                                    st.info("🔧 Starting comprehensive report generation...")
-                                    try:
-                                        # Get ballast results for representative storm if available
-                                        rep_ballast_result = None
-                                        if ballast_results_dict and representative_storm in ballast_results_dict:
-                                            rep_ballast_result = ballast_results_dict[representative_storm]
-                                            st.info(f"🔧 Including ballast analysis in report")
-                                        
-                                        comprehensive_html = generate_comprehensive_engineering_report(
-                                            rep_sw_result,
-                                            rep_fd_result, 
-                                            representative_storm,
-                                            config_comprehensive,
-                                            rep_hydrograph,
-                                            ballast_results=rep_ballast_result
-                                        )
-                                        st.success(f"✅ Report generated! Length: {len(comprehensive_html)} characters")
-                                        
-                                        # Display report in expandable section
-                                        with st.expander("📋 Complete Engineering Analysis Report", expanded=True):
-                                            st.markdown(comprehensive_html, unsafe_allow_html=True)
-                                        
-                                        # Download button for comprehensive report
-                                        st.download_button(
-                                            label="📥 Download Complete Report as HTML",
-                                            data=comprehensive_html,
-                                            file_name=f"comprehensive_infiltration_report_{representative_storm}_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.html",
-                                            mime="text/html",
-                                            key="download_comprehensive_report"
-                                        )
-                                        
-                                        # Additional export options
-                                        st.info("💡 **Tip:** The downloaded HTML file can be opened in any web browser and printed to PDF for professional documentation.")
-                                        
-                                    except Exception as report_error:
-                                        st.error(f"🚨 Report generation failed: {str(report_error)}")
-                                        st.error(f"🔧 Error type: {type(report_error).__name__}")
-                                        import traceback
-                                        st.error(f"🔧 Full traceback: {traceback.format_exc()}")
-                                    
-                                else:
-                                    st.warning("No storm data available for comprehensive report generation.")
-                            
-                            except Exception as e:
-                                st.error(f"🚨 Error generating comprehensive report: {str(e)}")
-                                st.error(f"🔧 Error type: {type(e).__name__}")
-                                import traceback
-                                st.error(f"🔧 Traceback: {traceback.format_exc()}")
+                            except Exception as report_error:
+                                st.error(f"Report generation failed: {str(report_error)}")
+                        
+                    except Exception as e:
+                        st.error(f"Error generating comprehensive report: {str(e)}")
+            else:
+                st.error("❌ No valid results generated. Check your parameters and uploaded files.")
             
             # Processing log (collapsed by default)
             if 'log_messages' in locals() and log_messages:
