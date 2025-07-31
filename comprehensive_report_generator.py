@@ -22,17 +22,15 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
-def generate_comprehensive_engineering_report(soakwell_results, french_drain_results, storm_name, config, hydrograph_data, ballast_results=None):
+def generate_comprehensive_engineering_report(soakwell_results, storm_name, config, hydrograph_data):
     """
-    Generate a comprehensive engineering report documenting the entire analysis
+    Generate a comprehensive engineering report documenting the soakwell analysis
     
     Parameters:
     soakwell_results: Results from soakwell simulation
-    french_drain_results: Results from French drain simulation  
     storm_name: Name of the analyzed storm
     config: Configuration parameters used
     hydrograph_data: Original storm hydrograph data
-    ballast_results: Optional ballast storage analysis results
     
     Returns:
     str: Complete HTML report content suitable for PDF conversion
@@ -297,16 +295,6 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
             if 'time_min' in soakwell_results and soakwell_results['time_min']:
                 duration_hours = max(soakwell_results['time_min']) / 60
                 
-        if (total_volume == 0 or peak_inflow == 0) and french_drain_results and isinstance(french_drain_results, dict):
-            # Try to get data from French drain results
-            if 'performance' in french_drain_results:
-                perf = french_drain_results['performance']
-                total_volume = perf.get('total_inflow_m3', 0)
-                if 'inflow' in french_drain_results:
-                    peak_inflow = max(french_drain_results['inflow']) if french_drain_results['inflow'] else 0
-                if 'time' in french_drain_results:
-                    duration_hours = max(french_drain_results['time']) / 3600 if french_drain_results['time'] else 0
-        
         # Fallback to hydrograph data if available
         if (total_volume == 0 or peak_inflow == 0) and hydrograph_data is not None:
             try:
@@ -456,91 +444,9 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
 
         <div class="page-break"></div>
         <div class="section">
-            <div class="section-title">6. BALLAST STORAGE ANALYSIS</div>
-    """
-    
-    # Add ballast storage analysis if available
-    if ballast_results and isinstance(ballast_results, dict):
-        analyzer = ballast_results.get('analyzer')
-        perf = ballast_results.get('performance', {})
-        
-        html_report += f"""
-            <div class="subsection-title">6.1 Enhanced Flood Modeling</div>
-            <p>This analysis extends the soakwell system by modeling overflow into the void space 
-            of rail formation ballast during extreme events. This approach recognizes that rail 
-            infrastructure can provide temporary flood storage while maintaining operational integrity.</p>
+            <div class="section-title">6. SYSTEM RECOMMENDATIONS</div>
             
-            <div class="subsection-title">6.2 Ballast Storage Configuration</div>
-            <table class="parameter-table">
-                <tr><th>Parameter</th><th>Value</th><th>Unit</th><th>Source/Basis</th></tr>
-                <tr><td>Ballast Void Ratio</td><td>{analyzer.ballast_void_ratio if analyzer else 0.75:.2f}</td><td>-</td><td>Clean rail ballast characteristics</td></tr>
-                <tr><td>Effective Porosity</td><td>{analyzer.effective_porosity if analyzer else 0.43:.1%}</td><td>-</td><td>Available void space for water storage</td></tr>
-                <tr><td>Soakwell Invert Level</td><td>{analyzer.soakwell_invert_level if analyzer else 'N/A'}</td><td>m AHD</td><td>Survey data/design drawings</td></tr>
-                <tr><td>Maximum Ballast Storage</td><td>{analyzer.adjusted_stage_storage['Effective_Volume_m3'].max() if analyzer and analyzer.adjusted_stage_storage is not None else 'N/A':.1f}</td><td>m³</td><td>12D stage-storage analysis</td></tr>
-            </table>
-            
-            <div class="subsection-title">6.3 Flood Performance Assessment</div>
-            <div class="result-box">
-                <table class="parameter-table">
-                    <tr><th>Performance Metric</th><th>Calculated Value</th><th>Engineering Assessment</th></tr>
-                    <tr><td>Maximum Water Level</td><td>{perf.get('max_water_level_AHD', 0):.2f} m AHD</td><td>Peak flood elevation during design storm</td></tr>
-                    <tr><td>Formation Flooding Depth</td><td>{perf.get('max_height_above_formation', 0):.2f} m</td><td>{'⚠️ Rail formation flooded' if perf.get('rail_formation_flooded', False) else '✅ No formation flooding'}</td></tr>
-                    <tr><td>Ballast Storage Utilization</td><td>{perf.get('ballast_storage_utilized_percent', 0):.1f}%</td><td>Percentage of available ballast storage used</td></tr>
-                    <tr><td>System Overflow Volume</td><td>{perf.get('total_system_overflow_m3', 0):.1f} m³</td><td>{'❌ System capacity exceeded' if perf.get('total_system_overflow_m3', 0) > 0.1 else '✅ System adequate'}</td></tr>
-                </table>
-            </div>
-        """
-        
-        if perf.get('rail_formation_flooded', False):
-            flood_depth = perf.get('max_height_above_formation', 0)
-            html_report += f"""
-            <div class="subsection-title">6.4 Flood Risk Assessment</div>
-            <p><strong>⚠️ Rail Formation Flooding Detected</strong></p>
-            <ul>
-                <li><strong>Flood Depth:</strong> {flood_depth:.2f}m above rail formation level</li>
-                <li><strong>Operational Impact:</strong> Rail operations suspended during flood event</li>
-                <li><strong>Recovery:</strong> Post-flood ballast cleaning and track restoration required</li>
-                <li><strong>Mitigation:</strong> Consider increased drainage capacity or emergency pumping</li>
-            </ul>
-            """
-        else:
-            html_report += f"""
-            <div class="subsection-title">6.4 System Performance</div>
-            <p><strong>✅ Flood Protection Adequate</strong></p>
-            <ul>
-                <li><strong>No Formation Flooding:</strong> System contains design storm successfully</li>
-                <li><strong>Ballast Contribution:</strong> {perf.get('ballast_storage_utilized_percent', 0):.1f}% additional capacity utilized</li>
-                <li><strong>Operational Continuity:</strong> Rail operations can continue during storm</li>
-            </ul>
-            """
-    
-    else:
-        html_report += """
-            <div class="subsection-title">6.1 Analysis Status</div>
-            <p><strong>Note:</strong> Ballast storage analysis not conducted. Standard soakwell analysis provides conservative approach.</p>
-        """
-    
-    html_report += """
-        </div>
-
-        <div class="page-break"></div>
-        <div class="section">
-            <div class="section-title">7. FRENCH DRAIN SYSTEM ANALYSIS</div>
-            
-            <div class="subsection-title">7.1 Analysis Status</div>
-            <p><strong>Note:</strong> French drain analysis temporarily disabled to focus on soakwell optimization.</p>
-            
-            <div class="result-box">
-                <p><strong>Current Focus:</strong> Soakwell analysis with ballast storage enhancement</p>
-                <p><strong>Future Development:</strong> French drain integration planned</p>
-            </div>
-        </div>
-
-        <div class="page-break"></div>
-        <div class="section">
-            <div class="section-title">8. SYSTEM RECOMMENDATIONS</div>
-            
-            <div class="subsection-title">8.1 Performance Assessment</div>
+            <div class="subsection-title">6.1 Performance Assessment</div>
             <div class="result-box">
                 <p><strong>System Performance Summary:</strong></p>
                 <ul>
@@ -550,7 +456,7 @@ def generate_comprehensive_engineering_report(soakwell_results, french_drain_res
                 </ul>
             </div>
             
-            <div class="subsection-title">7.2 Design Optimization</div>
+            <div class="subsection-title">6.2 Design Optimization</div>
             <p>Based on the analysis results, the following optimization strategies are recommended:</p>
             <ul>
                 <li><strong>Capacity Sizing:</strong> Ensure adequate storage volume for peak storm events</li>
