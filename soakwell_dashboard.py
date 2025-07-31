@@ -614,15 +614,22 @@ def solve_for_minimum_soakwells(hydrograph_data_dict, ks=1e-5, Sr=1.0, max_soakw
         }
     }
 
-def create_performance_plots(results, scenario_name):
-    """Create interactive plotly charts for soakwell performance"""
+def create_performance_plots(results, scenario_name, available_overflow_storage=None):
+    """
+    Create interactive plotly charts for soakwell performance
+    
+    Parameters:
+    results: Dictionary containing simulation results
+    scenario_name: String name for the scenario  
+    available_overflow_storage: Available storage for overflow (m³), separate from soakwell capacity
+    """
     
     # Create subplots with an additional plot for cumulative overflow
     fig = make_subplots(
         rows=3, cols=2,
         subplot_titles=('Flow Rates', 'Storage Volume', 
                        'Water Level', 'Cumulative Volumes',
-                       'Cumulative Overflow', 'Storage Efficiency'),
+                       'Cumulative Overflow vs Available Storage', 'Storage Efficiency'),
         specs=[[{"secondary_y": False}, {"secondary_y": False}],
                [{"secondary_y": False}, {"secondary_y": False}],
                [{"secondary_y": False}, {"secondary_y": False}]]
@@ -696,9 +703,9 @@ def create_performance_plots(results, scenario_name):
     )
     
     # Add available storage capacity line for context
-    if 'max_volume' in results:
-        fig.add_hline(y=results['max_volume'], line_dash="dot", line_color="purple", 
-                      annotation_text="Available Storage", row=3, col=1)
+    if available_overflow_storage is not None and available_overflow_storage > 0:
+        fig.add_hline(y=available_overflow_storage, line_dash="dot", line_color="purple", 
+                      annotation_text="Available Overflow Storage", row=3, col=1)
     
     # Plot 6: Storage efficiency over time
     storage_utilization = [(vol/results['max_volume']*100) if results['max_volume'] > 0 else 0 
@@ -791,7 +798,7 @@ def create_comparison_chart(all_results):
     
     return fig
 
-def generate_configuration_report(config, hydrograph_data_dict, soil_conditions, ks, Sr):
+def generate_configuration_report(config, hydrograph_data_dict, soil_conditions, ks, Sr, available_overflow_storage=None):
     """
     Generate a comprehensive report for a specific soakwell configuration
     
@@ -800,6 +807,7 @@ def generate_configuration_report(config, hydrograph_data_dict, soil_conditions,
     hydrograph_data_dict: Dictionary of storm scenarios
     soil_conditions: Soil parameter dictionary
     ks, Sr: Soil parameters for simulation
+    available_overflow_storage: Available storage for overflow (m³), separate from soakwell capacity
     """
     
     # Create a new section for the report
@@ -996,7 +1004,7 @@ def generate_configuration_report(config, hydrograph_data_dict, soil_conditions,
             
             # Generate performance plot
             scenario_name = f"{filename} - {config['configuration_name']}"
-            fig = create_performance_plots(result, scenario_name)
+            fig = create_performance_plots(result, scenario_name, available_overflow_storage)
             st.plotly_chart(fig, use_container_width=True)
     
     # Design recommendations
@@ -1162,6 +1170,25 @@ def main():
             0.5, 2.0, 1.0, 0.1,
             help="Factor to account for soil variability and clogging"
         )
+        
+        # Overflow storage parameters
+        st.subheader("Overflow Management")
+        available_overflow_storage = st.number_input(
+            "Available Overflow Storage (m³)",
+            min_value=0.0,
+            max_value=1000.0,
+            value=50.0,
+            step=5.0,
+            help="Additional storage capacity for overflow (e.g., ballast storage, detention areas). This is separate from soakwell capacity."
+        )
+        
+        st.info("""
+        💡 **Storage Types:**
+        - **Soakwell Storage**: Primary storage within the soakwell units
+        - **Overflow Storage**: Secondary storage for excess water (ballast, detention areas, etc.)
+        
+        The cumulative overflow graph shows overflow volume vs available overflow storage to help assess if additional storage capacity is adequate.
+        """)
         
         # Analysis options
         st.subheader("Analysis Options")
@@ -1471,7 +1498,7 @@ def main():
                             )
                         
                         # Performance plot
-                        fig = create_performance_plots(result, scenario_name)
+                        fig = create_performance_plots(result, scenario_name, available_overflow_storage)
                         st.plotly_chart(fig, use_container_width=True)
             
             # Comparison chart
@@ -1695,7 +1722,8 @@ def main():
                             st.session_state.report_hydrograph_data, 
                             st.session_state.report_soil_conditions,
                             st.session_state.report_ks, 
-                            st.session_state.report_Sr
+                            st.session_state.report_Sr,
+                            available_overflow_storage
                         )
                         # Clear the report flag but keep the report visible
                         st.session_state.generate_report = False
@@ -1909,7 +1937,7 @@ def main():
                                 st.metric("Utilization", f"{perf['storage_utilization_percent']:.1f}%")
                             
                             # Performance plots
-                            fig = create_performance_plots(result, scenario_name)
+                            fig = create_performance_plots(result, scenario_name, available_overflow_storage)
                             st.plotly_chart(fig, use_container_width=True)
                 
                 # Show comparison chart if requested
